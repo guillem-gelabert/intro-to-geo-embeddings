@@ -1,0 +1,36 @@
+# Pipeline-only sampling parameters, per region. AOI bbox/epsg live in
+# course.config.AREAS (single source of truth) and are NOT duplicated here.
+#
+# n_target: rough total row-count target per region (02-RESEARCH.md
+#   "Row budget" -> ~1,900-2,200 stratified points/region).
+# class_caps: per-course-label sample cap, applied AFTER stratifying
+#   candidates by WorldCover class. Crop/vegetation/built are capped well
+#   below their true pool size (both regions' pools run into the tens of
+#   thousands) so no single majority class dominates the table
+#   (02-RESEARCH.md Pitfall "frozen dataset too clean"). Water is capped
+#   lower (~400) because it is the scarcer class at both regions (pools
+#   1,400-1,720 at 50 m spacing) but still well above the cap, so a full
+#   400-point stratified draw is comfortably supported. Bare is capped
+#   below even that: Bern's own measured 50 m-spacing pool is only 219
+#   candidates, so a 500-style cap would be meaningless there — bare will
+#   be clamped to whatever is actually available per region at
+#   generate_sample_points() time (02-RESEARCH.md "Class pool sizes").
+# min_spacing_m: candidate-grid spacing before stratification, in meters
+#   (WorldCover is 10 m/px, so 50 m = every 5th pixel in each direction --
+#   02-RESEARCH.md Extraction Mechanics #4, avoiding per-point scattered
+#   reads and matching the measured 211,564/178,020-candidate pools).
+# seed: passed to np.random.default_rng() for the stratified draw --
+#   never left unseeded, so a re-run of generate_sample_points() at this
+#   seed reproduces byte-identical sample_id-to-(lon, lat) mappings
+#   (required for the 2018/2021/2024 join on sample_id, DATA-03).
+bern:
+  n_target: 2000
+  class_caps: { crop: 500, vegetation: 500, built: 500, water: 400, bare: 150 }
+  min_spacing_m: 50
+  seed: 42
+
+seville:
+  n_target: 2000
+  class_caps: { crop: 500, vegetation: 500, built: 500, water: 400, bare: 150 }
+  min_spacing_m: 50
+  seed: 42
