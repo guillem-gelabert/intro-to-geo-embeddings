@@ -17,3 +17,16 @@ outputs/
 
 # OS
 .DS_Store
+
+# Packaging artifacts
+dist/
+*.egg-info/
+.mypy_cache/
+
+# Credential-shaped files (preemptive control per the phase threat model,
+# before any credential-adjacent code exists)
+.env
+.env.*
+*-key.json
+*service-account*.json
+*.pem
