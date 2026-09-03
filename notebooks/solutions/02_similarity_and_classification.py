@@ -801,18 +801,14 @@ print(json.dumps(provenance, indent=2))
 # - Swapping AlphaEarth embeddings for raw Sentinel-2 bands, with every
 #   other step held identical, isolates representation as the only
 #   variable that changed.
-
-# %% [markdown]
-# ## What's next
 #
-# Module 4 (`01_alphaearth_access_visualize.ipynb`) and later modules
-# import these SAME `course` helpers -- `cosine_similarity_map`,
-# `make_blocks`, `spatial_cv_report` -- rather than redefining them, so the
-# similarity and validation logic you just used stays identical across the
-# whole course.
-
-# %% [markdown]
-# ## Resources
+# **What's next:** Module 4 (`01_alphaearth_access_visualize.ipynb`) and
+# later modules import these SAME `course` helpers --
+# `cosine_similarity_map`, `make_blocks`, `spatial_cv_report` -- rather
+# than redefining them, so the similarity and validation logic you just
+# used stays identical across the whole course.
+#
+# **Resources:**
 #
 # - AlphaEarth GCS README: https://developers.google.com/earth-engine/guides/aef_on_gcs_readme
 # - AlphaEarth Earth Engine catalog entry: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL
