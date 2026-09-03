@@ -36,3 +36,6 @@ dist/
 *-key.json
 *service-account*.json
 *.pem
+
+# Headless-run artifacts from `make execute-notebooks` (nbclient --output)
+notebooks/**/executed_*.ipynb
