@@ -193,7 +193,29 @@ Plans:
   4. A student with no `LGND_TOKEN` still runs the ecosystems notebook to completion: the LGND REST cells skip cleanly to a recorded response fixture, the optional local Clay encoder section points at the isolated environment, and the OlmoEarth comparison of custom temporal windows against annual fields is present in markdown.
   5. Student runs `05_capstone_artificialization.ipynb` as an end-to-end template (AOI → features → predictions → validation → map → uncertainty and provenance) with the rubric checklist and provenance dict pre-filled, and applies the model/data card template and provenance checklist — with exact attribution strings and license notes for every provider used — to a previous lab's outputs.
 
-**Plans**: TBD
+**Plans**: 9 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — course.embeddings change_score + norm_diagnostics helpers
+- [ ] 05-08-PLAN.md — model/data card template, provenance checklist, Module 3 worked example
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-02-PLAN.md — notebook 03: Header/Setup/Data, change score, WRONG-conclusion trap, calibrated threshold
+- [ ] 05-04-PLAN.md — notebook 04: Header/Setup, provider fixtures, TESSERA section
+- [ ] 05-06-PLAN.md — notebook 05: Header/Setup/AOI/features, predictions, spatial + leave-region-out validation
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 05-03-PLAN.md — notebook 03: transition matrix, artificialization mask, spatiotemporal CV, provenance, wrap-up
+- [ ] 05-05-PLAN.md — notebook 04: Clay section, LGND-guarded section, Clay-encoder pointer, OlmoEarth markdown, provenance, wrap-up
+- [ ] 05-07-PLAN.md — notebook 05: prediction map, uncertainty, provenance, rubric self-check, wrap-up
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 05-09-PLAN.md — README Notebooks table, templates link, full four-notebook headless verification gate
 
 ### Phase 6: Exercise Notebooks and Assessments
 
@@ -254,7 +276,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
-| 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
+| 5. Later Module Solution Notebooks | 0/9 | In Progress| - |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
 | 7. Slide Decks | 0/TBD | Not started | - |
 | 8. Narration Scripts | 0/TBD | Not started | - |
