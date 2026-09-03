@@ -14,7 +14,7 @@ KERNEL_NAME := geo-embeddings-course
 # Defaults to notebooks/solutions, which does not exist yet in this repo (Phase 3).
 NOTEBOOKS_DIR ?= notebooks/solutions
 
-.PHONY: env kernel test execute-notebooks
+.PHONY: env kernel test test-network execute-notebooks
 
 env:
 	uv sync --group dev
@@ -24,6 +24,12 @@ kernel:
 
 test:
 	uv run pytest tests/
+
+# Network-marked tests are excluded from `test`'s default addopts
+# (-m "not network" in pyproject.toml). Live AlphaEarth window reads
+# measured at 190-340s each (02-RESEARCH.md) — run this on demand only.
+test-network:
+	uv run pytest tests/ -m network
 
 # nbclient's underlying kernel process emits a benign "Kernel is running over TCP
 # without encryption" warning during local, single-machine headless execution —
