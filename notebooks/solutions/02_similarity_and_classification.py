@@ -382,3 +382,380 @@ plt.show()
 # single-pixel query can win instead. There is no query design that is
 # unconditionally best — that is why this notebook measures rather than
 # assumes.
+
+# %% [markdown]
+# ## Classification: the random-split trap
+#
+# Search-by-example needs no labels. A classifier does — and once labels
+# are in play, *how* you split the data into train/test sets stops being a
+# formality and becomes the single most consequential methodological
+# choice in this notebook.
+#
+# **Class filtering:** both regions carry a `bare` class, but it is a
+# residual, sparse category in each region's WorldCover-derived label
+# balance (219 points in Bern's full candidate pool, per
+# `02-RESEARCH.md`'s "Phase Requirements" table) — too thin to support a
+# stable per-class precision/recall estimate under 5-fold grouped CV. This
+# notebook classifies the four classes with adequate representation in
+# both regions: **built, crop, vegetation, water.** `bare` is dropped, and
+# that filtering is a deliberate, stated decision, not a silent one.
+
+# %% tags=["solution"]
+CLASSES = ["built", "crop", "vegetation", "water"]
+bern_clf = bern.loc[bern["label"].isin(CLASSES)].reset_index(drop=True)
+seville_clf = seville.loc[seville["label"].isin(CLASSES)].reset_index(drop=True)
+print(f"bern: {len(bern_clf)}/{len(bern)} rows kept after dropping 'bare'")
+print(f"seville: {len(seville_clf)}/{len(seville)} rows kept after dropping 'bare'")
+print(bern_clf["label"].value_counts())
+
+# %%
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    balanced_accuracy_score,
+    classification_report,
+)
+from sklearn.model_selection import GroupKFold, LeaveOneGroupOut, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+MODELS = {
+    "logreg": Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),
+        ]
+    ),
+    "random_forest": RandomForestClassifier(
+        n_estimators=200,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    ),
+}
+
+X_bern = course.schema.to_matrix(bern_clf)
+y_bern = bern_clf["label"].to_numpy()
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(
+    X_bern, y_bern, test_size=0.3, random_state=RANDOM_STATE, stratify=y_bern
+)
+
+trap_results = {}
+for name, model in MODELS.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    trap_results[name] = {
+        "accuracy": model.score(X_test, y_test),
+        "balanced_accuracy": balanced_accuracy_score(y_test, y_pred),
+    }
+    print(
+        f"TRAP ACCURACY (random split, {name}): "
+        f"accuracy={trap_results[name]['accuracy']:.3f}, "
+        f"balanced_accuracy={trap_results[name]['balanced_accuracy']:.3f}"
+    )
+
+rf_pred = MODELS["random_forest"].predict(X_test)
+fig, ax = plt.subplots(figsize=(6, 6))
+ConfusionMatrixDisplay.from_predictions(y_test, rf_pred, ax=ax, colorbar=False)
+ax.set_title("Random Forest — random split (the trap): looks great, proves little")
+fig.tight_layout()
+fig.savefig("figures/02_confusion_matrix_random_split.png")
+plt.show()
+
+# %% [markdown]
+# ## Spatial CV: project first, then grid
+#
+# A random split lets adjacent points — potentially metres apart — land on
+# opposite sides of train/test. AlphaEarth embeddings make this worse than
+# raw pixels, not better: a full year of spatial/temporal context is baked
+# into every embedding, so neighbouring points are *more* similar than raw
+# spectra would be (PITFALLS.md Pitfall 2).
+#
+# `make_blocks` refuses a geographic CRS outright (PITFALLS.md Pitfall 3:
+# "blocks computed in degrees are meaningless metre sizes"). So this
+# notebook reprojects Bern to **EPSG:2056** (Swiss LV95, metre-based) as an
+# explicit, visible step *before* gridding — never the other way around.
+
+# %% tags=["solution"]
+from course.config import BLOCK_SIZE_M
+from course.validation import make_blocks, spatial_cv_report
+
+bern_2056 = bern_clf.to_crs("EPSG:2056")
+groups_block = make_blocks(bern_2056, block_size_m=BLOCK_SIZE_M)
+n_blocks = len(np.unique(groups_block))
+assert n_blocks >= 5, (
+    f"only {n_blocks} spatial blocks at block_size_m={BLOCK_SIZE_M} — need at "
+    "least 5 for GroupKFold(n_splits=5); the AOI may have shrunk below the "
+    "DATA-08 floor"
+)
+print(f"bern: {n_blocks} spatial blocks at {BLOCK_SIZE_M} m")
+
+block_results = {}
+for name, model in MODELS.items():
+    report = spatial_cv_report(
+        model,
+        X_bern,
+        y_bern,
+        groups=groups_block,
+        cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
+    )
+    block_results[name] = report
+    print(
+        f"BLOCK CV ({name}): balanced_accuracy="
+        f"{report['mean_balanced_accuracy']:.3f} ± {report['std_balanced_accuracy']:.3f} "
+        f"(random-split was {trap_results[name]['balanced_accuracy']:.3f})"
+    )
+
+# %% [markdown]
+# **Measured so far:** the random-split and spatial-block numbers above sit
+# within a few points of each other, not tens of points apart. That gap is
+# real and worth teaching, but it is not yet the dramatic effect this
+# notebook is building toward — that comes next, from leave-region-out.
+
+# %% [markdown]
+# ## Leave-region-out: the dramatic, honest gap
+#
+# Train on Bern only, predict Seville only — a climatically and
+# geographically distinct region the model never saw during training. This
+# reuses the *exact same* `spatial_cv_report` call shape as the block CV
+# above, changing only `groups` (now the region label) and `cv` (now
+# `LeaveOneGroupOut`), which is itself the point: the helper is genuinely
+# generic, not two different code paths dressed up to look similar.
+#
+# **Why leave-region-out is where the real gap lives, and in-region block
+# CV is not:** AlphaEarth embeddings aggregate a full year of multi-modal
+# satellite signal into every pixel, which plausibly makes them more
+# resistant to naive *adjacent-pixel* leakage than raw single-date spectral
+# bands would be — that is a within-region effect. Nothing about that
+# aggregation helps a model trained only on Bern's spectral/embedding
+# signature recognize Seville's, which is a genuinely different climate,
+# soil, and crop-calendar signal — an extrapolation problem, not an
+# interpolation one. The Sentinel-2 baseline in the next section tests this
+# hypothesis directly.
+
+# %% tags=["solution"]
+combined = pd.concat([bern_clf, seville_clf], ignore_index=True)
+X_all = course.schema.to_matrix(combined)
+y_all = combined["label"].to_numpy()
+region_groups = combined["region"].to_numpy()
+
+lro_results = {}
+for name, model in MODELS.items():
+    report = spatial_cv_report(
+        model, X_all, y_all, groups=region_groups, cv=LeaveOneGroupOut()
+    )
+    lro_results[name] = report
+    print(
+        f"LEAVE-REGION-OUT ({name}): balanced_accuracy="
+        f"{report['mean_balanced_accuracy']:.3f} ± {report['std_balanced_accuracy']:.3f} "
+        f"(random-split was {trap_results[name]['balanced_accuracy']:.3f}, "
+        f"block CV was {block_results[name]['mean_balanced_accuracy']:.3f})"
+    )
+
+# %% [markdown]
+# **The headline result:** the leave-region-out numbers printed above show
+# a double-digit balanced-accuracy drop relative to the random-split and
+# block-CV numbers from the previous section — a large, robust gap,
+# consistent with a similar sample measured previously on this data
+# (02-RESEARCH.md: 17-19 points for logistic regression and random forest,
+# train Bern → predict Seville). In-region spatial-block CV, by contrast,
+# showed only a 1-4 point gap above. **Leave-region-out is the primary
+# evidence that a random split lies here** — the in-region block-vs-random
+# comparison is a real, smaller, second lesson about interpolation vs.
+# extrapolation, not the dramatic effect.
+
+# %%
+model_names = list(MODELS.keys())
+scenarios = ["random split", "spatial-block CV", "leave-region-out"]
+scores = {
+    name: [
+        trap_results[name]["balanced_accuracy"],
+        block_results[name]["mean_balanced_accuracy"],
+        lro_results[name]["mean_balanced_accuracy"],
+    ]
+    for name in model_names
+}
+
+fig, ax = plt.subplots(figsize=(7, 5))
+bar_width = 0.35
+x = np.arange(len(scenarios))
+for i, name in enumerate(model_names):
+    ax.bar(x + i * bar_width, scores[name], width=bar_width, label=name)
+ax.set_xticks(x + bar_width / 2)
+ax.set_xticklabels(scenarios)
+ax.set_ylabel("balanced accuracy")
+ax.set_ylim(0, 1)
+ax.set_title("Leave-region-out is the dramatic gap; in-region block CV is a smaller one")
+ax.legend()
+fig.tight_layout()
+fig.savefig("figures/02_cv_comparison_bar_chart.png")
+plt.show()
+
+# %%
+rf_model = MODELS["random_forest"]
+lro_cv = LeaveOneGroupOut()
+# LeaveOneGroupOut yields one (train, test) split per unique group; pick the
+# split whose held-out fold is Seville specifically (the headline scenario).
+train_idx, test_idx = next(
+    (tr, te)
+    for tr, te in lro_cv.split(X_all, y_all, groups=region_groups)
+    if (region_groups[te] == "seville").all()
+)
+
+rf_model.fit(X_all[train_idx], y_all[train_idx])
+seville_pred = rf_model.predict(X_all[test_idx])
+seville_true = y_all[test_idx]
+
+report_df = pd.DataFrame(
+    classification_report(seville_true, seville_pred, output_dict=True)
+).T
+print("Per-class precision/recall, leave-region-out (train Bern, predict Seville, random_forest):")
+print(report_df)
+
+# %%
+seville_eval = combined.iloc[test_idx].reset_index(drop=True)
+correct = seville_pred == seville_true
+
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.scatter(
+    seville_eval.loc[correct, "lon"], seville_eval.loc[correct, "lat"],
+    s=8, c="tab:green", label="correct", alpha=0.6,
+)
+ax.scatter(
+    seville_eval.loc[~correct, "lon"], seville_eval.loc[~correct, "lat"],
+    s=8, c="tab:red", label="incorrect", alpha=0.6,
+)
+ax.set_title("Seville errors under leave-region-out (train Bern, random_forest)")
+ax.set_xlabel("lon")
+ax.set_ylabel("lat")
+ax.legend(loc="upper right", fontsize="small")
+fig.tight_layout()
+fig.savefig("figures/02_error_map.png")
+plt.show()
+
+# %% [markdown]
+# **Takeaway:** leave-region-out is where the dramatic, generalization-
+# relevant gap lives for this modality — a model that looks excellent on
+# Bern alone loses a large fraction of its accuracy the moment it has to
+# extrapolate to a different climate and land-cover mix. In-region spatial
+# blocking matters too, and is worth teaching in its own right, just far
+# less dramatically here than the leave-region-out effect above.
+
+# %% [markdown]
+# ## Baseline: the identical pipeline on raw Sentinel-2 bands
+#
+# Everything above ran on 64-dimensional AlphaEarth embeddings. This
+# section re-runs the *identical* pipeline — same classifiers, same
+# `test_size`/`random_state`, same `make_blocks`/`GroupKFold` call, same
+# `LeaveOneGroupOut` call — on `S2_COLS`, the frozen table's raw Sentinel-2
+# reflectance bands, changing nothing except which feature matrix goes in.
+# This isolates the feature representation as the only variable, testing
+# the hypothesis raised above: are embeddings more leakage-resistant than
+# raw single-date spectral bands, or not? The numbers below are measured,
+# not assumed either way.
+
+# %% tags=["solution"]
+from course.schema import S2_COLS
+
+# A handful of points sit at the very edge of a Sentinel-2 scene and come
+# back NaN in these raw bands even though their AlphaEarth embedding (a
+# yearly composite) is complete -- drop them for this baseline only, and
+# say so, rather than let NaN silently propagate into StandardScaler/
+# LogisticRegression (which would otherwise produce a nonsense NaN score).
+bern_clf_s2 = bern_clf.dropna(subset=S2_COLS).reset_index(drop=True)
+combined_s2 = combined.dropna(subset=S2_COLS).reset_index(drop=True)
+print(
+    f"S2 baseline: dropped {len(bern_clf) - len(bern_clf_s2)} Bern row(s) and "
+    f"{len(combined) - len(combined_s2)} combined row(s) with NaN Sentinel-2 bands"
+)
+
+X_bern_s2 = bern_clf_s2[S2_COLS].to_numpy(np.float32)
+y_bern_s2 = bern_clf_s2["label"].to_numpy()
+groups_block_s2 = make_blocks(bern_clf_s2.to_crs("EPSG:2056"), block_size_m=BLOCK_SIZE_M)
+
+X_all_s2 = combined_s2[S2_COLS].to_numpy(np.float32)
+y_all_s2 = combined_s2["label"].to_numpy()
+region_groups_s2 = combined_s2["region"].to_numpy()
+
+# %%
+s2_models = {
+    "logreg": Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),
+        ]
+    ),
+    "random_forest": RandomForestClassifier(
+        n_estimators=200,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    ),
+}
+
+s2_trap, s2_block, s2_lro = {}, {}, {}
+for name, model in s2_models.items():
+    Xtr, Xte, ytr, yte = train_test_split(
+        X_bern_s2, y_bern_s2, test_size=0.3, random_state=RANDOM_STATE, stratify=y_bern_s2
+    )
+    model.fit(Xtr, ytr)
+    s2_trap[name] = balanced_accuracy_score(yte, model.predict(Xte))
+
+    s2_block[name] = spatial_cv_report(
+        model, X_bern_s2, y_bern_s2, groups=groups_block_s2,
+        cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
+    )["mean_balanced_accuracy"]
+
+    s2_lro[name] = spatial_cv_report(
+        model, X_all_s2, y_all_s2, groups=region_groups_s2, cv=LeaveOneGroupOut()
+    )["mean_balanced_accuracy"]
+
+    print(
+        f"S2 baseline ({name}): random_split={s2_trap[name]:.3f}, "
+        f"block_cv={s2_block[name]:.3f}, leave_region_out={s2_lro[name]:.3f}"
+    )
+
+# %%
+baseline_table = pd.DataFrame(
+    {
+        "AlphaEarth embeddings": [
+            trap_results["random_forest"]["balanced_accuracy"],
+            block_results["random_forest"]["mean_balanced_accuracy"],
+            lro_results["random_forest"]["mean_balanced_accuracy"],
+        ],
+        "Sentinel-2 raw bands": [
+            s2_trap["random_forest"],
+            s2_block["random_forest"],
+            s2_lro["random_forest"],
+        ],
+    },
+    index=["random split", "spatial-block CV", "leave-region-out"],
+)
+print("Comparison (random_forest, balanced accuracy):")
+print(baseline_table)
+
+embedding_block_gap = (
+    trap_results["random_forest"]["balanced_accuracy"]
+    - block_results["random_forest"]["mean_balanced_accuracy"]
+)
+s2_block_gap = s2_trap["random_forest"] - s2_block["random_forest"]
+print(
+    f"in-region block-CV gap: embeddings={embedding_block_gap:.3f}, "
+    f"Sentinel-2={s2_block_gap:.3f}"
+)
+
+# %% [markdown]
+# **Takeaway:** the table above reports what this run actually measured,
+# not an assumed direction. If the Sentinel-2 in-region block-CV gap comes
+# out larger than the embeddings' gap, that supports the hypothesis raised
+# earlier — AlphaEarth embeddings, which already aggregate a full year of
+# multi-modal spatial/temporal context per pixel, are more resistant to
+# naive adjacent-pixel leakage than raw single-date reflectance values,
+# which is itself a genuinely interesting, teachable result. If it does
+# not come out that way on this sample, that is reported just as plainly:
+# the honest number is the lesson, not a story picked in advance. Either
+# way, the leave-region-out gap — for both feature representations —
+# remains the larger, more consequential effect in this notebook.
