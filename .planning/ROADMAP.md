@@ -158,7 +158,27 @@ Plans:
   4. A student with no credentials runs the same notebook's downstream cells from the bundled clipped AlphaEarth GeoTIFF/parquet — int8 dequantization formula, unit-norm check, static pseudo-RGB and PCA plots — and reaches the same conclusions as Path A.
   5. The visualization notebook poses "why does this map look geographically structured although the three axes have no RGB meaning?" and every caption and Takeaway uses the phrasing "this component separates these landscape types in this sample", never "component 3 measures vegetation".
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — 00_embedding_refresher.ipynb (NumPy/cosine/PCA/classifier/CRS, toy data, no network)
+- [ ] 04-02-PLAN.md — Clay (LGND) fixture data prep: pipeline/fetch_clay_fixture.py, checked-in fixture + provenance
+- [ ] 04-03-PLAN.md — clipped AlphaEarth raster data prep: pipeline/extract_clip_raster.py, checked-in COG + provenance
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-04-PLAN.md — 00b_representation_inspection.ipynb (AlphaEarth pixel vs Clay patch vs optional SatCLIP)
+- [ ] 04-05-PLAN.md — 01_alphaearth_access_visualize.ipynb: Header, Setup, Path A (Earth Engine, skip-execution)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-06-PLAN.md — 01_alphaearth_access_visualize.ipynb: Path B (offline, dequantization/pseudo-RGB/PCA), EARLY-05 phrasing-rule test
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 04-07-PLAN.md — DATA_CARD.md/README.md consolidation, repo-wide headless-execution smoke test
 
 ### Phase 5: Later Module Solution Notebooks
 
