@@ -52,3 +52,12 @@ def test_dequantize_batch_no_cross_point_leakage():
     for i in range(5):
         expected = dequantize_aef(raw[:, i])
         assert np.allclose(result[:, i], expected, atol=1e-6, equal_nan=True)
+
+
+def test_dequantize_rejects_band_last_input():
+    """A frozen table's A00..A63 columns come out as (n_points, 64). Passing
+    that directly would normalize across points instead of bands and return
+    silently wrong vectors, so it must raise instead."""
+    band_last = np.zeros((5, 64), dtype=np.int8)
+    with pytest.raises(ValueError, match="band axis first"):
+        dequantize_aef(band_last)

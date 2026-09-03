@@ -11,6 +11,7 @@ raw int8 values (instead of dequantizing first) silently corrupts the data.
 import numpy as np
 
 NODATA = -128
+N_BANDS = 64
 
 
 def dequantize_aef(raw: np.ndarray) -> np.ndarray:
@@ -29,6 +30,14 @@ def dequantize_aef(raw: np.ndarray) -> np.ndarray:
     is required, not optional — population statistics show the pre-renorm
     norm deviates from 1.0 by up to ~0.9% per pixel (02-RESEARCH.md).
     """
+    if raw.shape[0] != N_BANDS:
+        raise ValueError(
+            f"expected the band axis first with length {N_BANDS}, got shape "
+            f"{raw.shape}. A frozen table's A00..A63 columns come out band-last "
+            f"as (n_points, {N_BANDS}) — transpose before calling, or the "
+            f"normalization runs across points instead of bands and silently "
+            f"returns wrong vectors."
+        )
     mask = np.any(raw == NODATA, axis=0, keepdims=True)
     v = raw.astype(np.float32)
     d = (v / 127.5) ** 2 * np.sign(v)
