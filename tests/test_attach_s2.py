@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from course.live import LiveSourceUnavailable
 from course.schema import S2_COLS
 from pipeline import attach_s2 as attach_s2_module
 from pipeline.attach_s2 import attach_s2
@@ -44,7 +43,9 @@ def test_attach_s2_calls_sample_bands_exactly_once(monkeypatch):
         calls.append(points_lonlat.shape[0])
         return _fake_bands_df(points_lonlat.shape[0])
 
-    monkeypatch.setattr(attach_s2_module, "search_scenes", lambda *a, **k: [{"id": "x"}])
+    monkeypatch.setattr(
+        attach_s2_module, "search_scenes", lambda *a, **k: [{"id": "x"}]
+    )
     monkeypatch.setattr(attach_s2_module, "select_scenes", lambda items: items)
     monkeypatch.setattr(attach_s2_module, "sample_bands", _fake_sample_bands)
 
@@ -55,7 +56,9 @@ def test_attach_s2_calls_sample_bands_exactly_once(monkeypatch):
 
 
 def test_attach_s2_preserves_point_order(monkeypatch):
-    monkeypatch.setattr(attach_s2_module, "search_scenes", lambda *a, **k: [{"id": "x"}])
+    monkeypatch.setattr(
+        attach_s2_module, "search_scenes", lambda *a, **k: [{"id": "x"}]
+    )
     monkeypatch.setattr(attach_s2_module, "select_scenes", lambda items: items)
     monkeypatch.setattr(
         attach_s2_module,
