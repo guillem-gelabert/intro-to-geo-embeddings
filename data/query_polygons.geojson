@@ -1,0 +1,1446 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "bern-quarry-01",
+      "properties": {
+        "id": "bern-quarry-01",
+        "region": "bern",
+        "feature_type": "quarry",
+        "label": "Steinbruch am Gurten",
+        "osm_id": 92420454,
+        "osm_tags": {
+          "landuse": "quarry",
+          "name": "Steinbruch am Gurten",
+          "resource": "sandstone",
+          "source": "Bing"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              7.4374331,
+              46.9226405
+            ],
+            [
+              7.4373311,
+              46.9225519
+            ],
+            [
+              7.4370523,
+              46.9224711
+            ],
+            [
+              7.4369009,
+              46.9225518
+            ],
+            [
+              7.4368021,
+              46.9225049
+            ],
+            [
+              7.4367818,
+              46.9223949
+            ],
+            [
+              7.4366214,
+              46.9223475
+            ],
+            [
+              7.4362181,
+              46.9222283
+            ],
+            [
+              7.4363281,
+              46.9220598
+            ],
+            [
+              7.4367379,
+              46.9220663
+            ],
+            [
+              7.4369691,
+              46.9219627
+            ],
+            [
+              7.4374275,
+              46.9221467
+            ],
+            [
+              7.4377549,
+              46.9221935
+            ],
+            [
+              7.4374331,
+              46.9226405
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "bern-quarry-02",
+      "properties": {
+        "id": "bern-quarry-02",
+        "region": "bern",
+        "feature_type": "quarry",
+        "label": "unnamed quarry, western AOI",
+        "osm_id": 45270906,
+        "osm_tags": {
+          "landuse": "quarry",
+          "source": "Orthofotos Vermessungsamt Stadt Bern"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              7.350057,
+              46.9156863
+            ],
+            [
+              7.349851,
+              46.914549
+            ],
+            [
+              7.3500009,
+              46.9143664
+            ],
+            [
+              7.351372,
+              46.9144691
+            ],
+            [
+              7.3514301,
+              46.9143117
+            ],
+            [
+              7.3516765,
+              46.9139713
+            ],
+            [
+              7.3516927,
+              46.9139711
+            ],
+            [
+              7.3518102,
+              46.9139861
+            ],
+            [
+              7.3521866,
+              46.9141027
+            ],
+            [
+              7.352233,
+              46.9140996
+            ],
+            [
+              7.3523078,
+              46.9140294
+            ],
+            [
+              7.352379,
+              46.91396
+            ],
+            [
+              7.3524431,
+              46.9139343
+            ],
+            [
+              7.3525948,
+              46.9139385
+            ],
+            [
+              7.3526541,
+              46.9139547
+            ],
+            [
+              7.352695,
+              46.9139763
+            ],
+            [
+              7.3527537,
+              46.9139788
+            ],
+            [
+              7.3532156,
+              46.9140508
+            ],
+            [
+              7.3533838,
+              46.9140911
+            ],
+            [
+              7.3535497,
+              46.9141049
+            ],
+            [
+              7.353695,
+              46.9141107
+            ],
+            [
+              7.3537392,
+              46.9141299
+            ],
+            [
+              7.3538674,
+              46.9142543
+            ],
+            [
+              7.3539765,
+              46.9144175
+            ],
+            [
+              7.3541369,
+              46.9146802
+            ],
+            [
+              7.3541969,
+              46.9147354
+            ],
+            [
+              7.3542811,
+              46.9147555
+            ],
+            [
+              7.3543471,
+              46.9147549
+            ],
+            [
+              7.3552553,
+              46.9146862
+            ],
+            [
+              7.3566554,
+              46.9145837
+            ],
+            [
+              7.3570041,
+              46.9142226
+            ],
+            [
+              7.3571431,
+              46.9142855
+            ],
+            [
+              7.3572742,
+              46.9143907
+            ],
+            [
+              7.3574208,
+              46.9145316
+            ],
+            [
+              7.3576326,
+              46.9148959
+            ],
+            [
+              7.3576332,
+              46.9149725
+            ],
+            [
+              7.3575285,
+              46.9150464
+            ],
+            [
+              7.3570562,
+              46.9152683
+            ],
+            [
+              7.3567847,
+              46.9154283
+            ],
+            [
+              7.3566239,
+              46.9155205
+            ],
+            [
+              7.3564647,
+              46.9156044
+            ],
+            [
+              7.3562784,
+              46.9156643
+            ],
+            [
+              7.3557408,
+              46.9158343
+            ],
+            [
+              7.3551847,
+              46.9160428
+            ],
+            [
+              7.3548034,
+              46.9161469
+            ],
+            [
+              7.3543006,
+              46.9162524
+            ],
+            [
+              7.3536046,
+              46.9163002
+            ],
+            [
+              7.3530311,
+              46.9163478
+            ],
+            [
+              7.352362,
+              46.9164232
+            ],
+            [
+              7.3519436,
+              46.9164865
+            ],
+            [
+              7.3517458,
+              46.9164867
+            ],
+            [
+              7.3515653,
+              46.9164502
+            ],
+            [
+              7.351169,
+              46.9163339
+            ],
+            [
+              7.3510567,
+              46.9163077
+            ],
+            [
+              7.3507471,
+              46.9162213
+            ],
+            [
+              7.3502289,
+              46.916218
+            ],
+            [
+              7.3496775,
+              46.916106
+            ],
+            [
+              7.3496728,
+              46.9160232
+            ],
+            [
+              7.3498391,
+              46.9158592
+            ],
+            [
+              7.350057,
+              46.9156863
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "bern-development-03",
+      "properties": {
+        "id": "bern-development-03",
+        "region": "bern",
+        "feature_type": "development",
+        "label": "Neubau Campus Bern der Berner Fachhochschule",
+        "osm_id": 669154913,
+        "osm_tags": {
+          "check_date": "2025-05-15",
+          "landuse": "construction",
+          "name": "Neubau Campus Bern der Berner Fachhochschule",
+          "proposed:amenity": "college",
+          "short_name": "Neuer Campus Bern der BFH",
+          "website": "https://www.campus-bern.ch/"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              7.4111429,
+              46.9480521
+            ],
+            [
+              7.4111687,
+              46.9481558
+            ],
+            [
+              7.41007,
+              46.9481621
+            ],
+            [
+              7.4100629,
+              46.9481097
+            ],
+            [
+              7.4099595,
+              46.9481174
+            ],
+            [
+              7.409924,
+              46.9481493
+            ],
+            [
+              7.4097391,
+              46.9481511
+            ],
+            [
+              7.4091169,
+              46.9481648
+            ],
+            [
+              7.4087489,
+              46.9480865
+            ],
+            [
+              7.4086896,
+              46.9480679
+            ],
+            [
+              7.4086677,
+              46.9480606
+            ],
+            [
+              7.4086388,
+              46.9480467
+            ],
+            [
+              7.4084102,
+              46.9479252
+            ],
+            [
+              7.4081254,
+              46.9477942
+            ],
+            [
+              7.4080309,
+              46.9477606
+            ],
+            [
+              7.407942,
+              46.947734
+            ],
+            [
+              7.4077006,
+              46.9476812
+            ],
+            [
+              7.407703,
+              46.9477468
+            ],
+            [
+              7.4071525,
+              46.9477563
+            ],
+            [
+              7.4071841,
+              46.9475132
+            ],
+            [
+              7.406844,
+              46.9475135
+            ],
+            [
+              7.4068377,
+              46.9471366
+            ],
+            [
+              7.4068704,
+              46.946344
+            ],
+            [
+              7.4071327,
+              46.9463365
+            ],
+            [
+              7.4071245,
+              46.9465868
+            ],
+            [
+              7.4079147,
+              46.946592
+            ],
+            [
+              7.4084063,
+              46.9465763
+            ],
+            [
+              7.408997,
+              46.9467246
+            ],
+            [
+              7.4091947,
+              46.9469569
+            ],
+            [
+              7.410309,
+              46.9472996
+            ],
+            [
+              7.4111429,
+              46.9480521
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "bern-solar_farm-04",
+      "properties": {
+        "id": "bern-solar_farm-04",
+        "region": "bern",
+        "feature_type": "solar_farm",
+        "label": "unnamed ground-mounted PV plant",
+        "osm_id": 1483056980,
+        "osm_tags": {
+          "plant:output:electricity": "yes",
+          "plant:source": "solar",
+          "power": "plant"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              7.4127712,
+              46.9493273
+            ],
+            [
+              7.4126999,
+              46.9492803
+            ],
+            [
+              7.4126473,
+              46.949311
+            ],
+            [
+              7.4125818,
+              46.9492707
+            ],
+            [
+              7.4126293,
+              46.9492389
+            ],
+            [
+              7.4125974,
+              46.9492169
+            ],
+            [
+              7.4127444,
+              46.9491157
+            ],
+            [
+              7.4127728,
+              46.9491361
+            ],
+            [
+              7.4128205,
+              46.9491043
+            ],
+            [
+              7.4132307,
+              46.9493712
+            ],
+            [
+              7.4131854,
+              46.9494066
+            ],
+            [
+              7.413125,
+              46.9493639
+            ],
+            [
+              7.4130859,
+              46.9493898
+            ],
+            [
+              7.4130549,
+              46.9493828
+            ],
+            [
+              7.4129683,
+              46.9493236
+            ],
+            [
+              7.4129185,
+              46.9493588
+            ],
+            [
+              7.4128537,
+              46.949316
+            ],
+            [
+              7.412818,
+              46.9493413
+            ],
+            [
+              7.4127868,
+              46.9493208
+            ],
+            [
+              7.4127712,
+              46.9493273
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "bern-development-05",
+      "properties": {
+        "id": "bern-development-05",
+        "region": "bern",
+        "feature_type": "development",
+        "label": "Untere Juchstrasse development",
+        "osm_id": 1126687532,
+        "osm_tags": {
+          "construction": "industrial",
+          "landuse": "construction",
+          "name": "Untere Juchstrasse",
+          "note": "https://www.q72-niederwangen.ch/",
+          "opening_date": "2023-06",
+          "website": "https://www.koeniz.ch/wohnen/planen-und-bauen/planung-und-entwicklung/juch-hallmatt.page/1424"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              7.3773342,
+              46.9296496
+            ],
+            [
+              7.3771706,
+              46.9295308
+            ],
+            [
+              7.376755,
+              46.9289434
+            ],
+            [
+              7.376475,
+              46.9286274
+            ],
+            [
+              7.3771033,
+              46.9284074
+            ],
+            [
+              7.3769922,
+              46.9282934
+            ],
+            [
+              7.3768192,
+              46.9281226
+            ],
+            [
+              7.3769602,
+              46.9281162
+            ],
+            [
+              7.3783166,
+              46.9276122
+            ],
+            [
+              7.379763,
+              46.9291363
+            ],
+            [
+              7.379934,
+              46.9293836
+            ],
+            [
+              7.3797856,
+              46.9296243
+            ],
+            [
+              7.3797958,
+              46.929784
+            ],
+            [
+              7.3791429,
+              46.9301888
+            ],
+            [
+              7.3788416,
+              46.9305467
+            ],
+            [
+              7.3774682,
+              46.9298
+            ],
+            [
+              7.3773342,
+              46.9296496
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "seville-solar_farm-06",
+      "properties": {
+        "id": "seville-solar_farm-06",
+        "region": "seville",
+        "feature_type": "solar_farm",
+        "label": "Las Corchas (50 MW)",
+        "osm_id": 1003975862,
+        "osm_tags": {
+          "name": "Las Corchas",
+          "operator": "EGPE (Endesa)",
+          "plant:method": "photovoltaic",
+          "plant:output:electricity": "50 MW",
+          "plant:source": "solar",
+          "power": "plant",
+          "source": "https://www.juntadeandalucia.es/sites/default/files/2021-10/3.%20Estudio%20de%20Sinergias_EiA%20HSF%20PQ%201.pdf",
+          "url": "https://www.energynews.es/endesa-parque-fotovoltico-las-corchas/"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -5.8134924,
+              37.4496376
+            ],
+            [
+              -5.8137155,
+              37.4495249
+            ],
+            [
+              -5.8155817,
+              37.4489606
+            ],
+            [
+              -5.8159894,
+              37.4473423
+            ],
+            [
+              -5.8141143,
+              37.446693
+            ],
+            [
+              -5.8133916,
+              37.4464427
+            ],
+            [
+              -5.8121853,
+              37.4441092
+            ],
+            [
+              -5.8108842,
+              37.4449028
+            ],
+            [
+              -5.8093958,
+              37.445438
+            ],
+            [
+              -5.8076792,
+              37.4456935
+            ],
+            [
+              -5.8064274,
+              37.4462566
+            ],
+            [
+              -5.8063917,
+              37.4462727
+            ],
+            [
+              -5.8065227,
+              37.4467473
+            ],
+            [
+              -5.804997,
+              37.4479933
+            ],
+            [
+              -5.8051922,
+              37.4478126
+            ],
+            [
+              -5.8049081,
+              37.4478499
+            ],
+            [
+              -5.8043729,
+              37.4472753
+            ],
+            [
+              -5.8039785,
+              37.4468312
+            ],
+            [
+              -5.7997084,
+              37.4487477
+            ],
+            [
+              -5.7990325,
+              37.4488755
+            ],
+            [
+              -5.7985604,
+              37.4502723
+            ],
+            [
+              -5.7998264,
+              37.4512178
+            ],
+            [
+              -5.7978308,
+              37.4529893
+            ],
+            [
+              -5.7934963,
+              37.4498805
+            ],
+            [
+              -5.7928848,
+              37.4500338
+            ],
+            [
+              -5.7924449,
+              37.4499018
+            ],
+            [
+              -5.7923108,
+              37.4499316
+            ],
+            [
+              -5.7919782,
+              37.4498294
+            ],
+            [
+              -5.7917583,
+              37.4494887
+            ],
+            [
+              -5.788573,
+              37.4508749
+            ],
+            [
+              -5.7888906,
+              37.451419
+            ],
+            [
+              -5.7870773,
+              37.4521925
+            ],
+            [
+              -5.7939591,
+              37.4564869
+            ],
+            [
+              -5.7956743,
+              37.4552037
+            ],
+            [
+              -5.7973265,
+              37.4558681
+            ],
+            [
+              -5.7992148,
+              37.4561406
+            ],
+            [
+              -5.8027596,
+              37.4552392
+            ],
+            [
+              -5.8032976,
+              37.4556737
+            ],
+            [
+              -5.8038751,
+              37.4564001
+            ],
+            [
+              -5.8052468,
+              37.4557542
+            ],
+            [
+              -5.8042365,
+              37.4545204
+            ],
+            [
+              -5.8041924,
+              37.4544666
+            ],
+            [
+              -5.8091939,
+              37.4513117
+            ],
+            [
+              -5.8102482,
+              37.4514404
+            ],
+            [
+              -5.8134924,
+              37.4496376
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "seville-solar_farm-07",
+      "properties": {
+        "id": "seville-solar_farm-07",
+        "region": "seville",
+        "feature_type": "solar_farm",
+        "label": "Planta Fotovoltaica Las Naranjillas (50 MW)",
+        "osm_id": 1032009181,
+        "osm_tags": {
+          "name": "Planta Fotovoltaica Las Naranjillas",
+          "plant:method": "photovoltaic",
+          "plant:output:electricity": "50 MW",
+          "plant:source": "solar",
+          "power": "plant"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -5.7964146,
+              37.4262323
+            ],
+            [
+              -5.7975733,
+              37.4252525
+            ],
+            [
+              -5.7986784,
+              37.424639
+            ],
+            [
+              -5.7994402,
+              37.4244942
+            ],
+            [
+              -5.8004165,
+              37.4244771
+            ],
+            [
+              -5.802809,
+              37.4233184
+            ],
+            [
+              -5.8037424,
+              37.4227219
+            ],
+            [
+              -5.7999337,
+              37.4191091
+            ],
+            [
+              -5.7986999,
+              37.4188194
+            ],
+            [
+              -5.7973373,
+              37.4191091
+            ],
+            [
+              -5.7962966,
+              37.4199442
+            ],
+            [
+              -5.796361,
+              37.4209581
+            ],
+            [
+              -5.7939041,
+              37.4216313
+            ],
+            [
+              -5.7935178,
+              37.422151
+            ],
+            [
+              -5.7914794,
+              37.4221851
+            ],
+            [
+              -5.790267,
+              37.423493
+            ],
+            [
+              -5.7887381,
+              37.4247157
+            ],
+            [
+              -5.7867694,
+              37.4258702
+            ],
+            [
+              -5.7853532,
+              37.4263345
+            ],
+            [
+              -5.7853961,
+              37.42685
+            ],
+            [
+              -5.785203,
+              37.4276509
+            ],
+            [
+              -5.7851493,
+              37.4281578
+            ],
+            [
+              -5.7854337,
+              37.4288863
+            ],
+            [
+              -5.7858038,
+              37.4292739
+            ],
+            [
+              -5.7874131,
+              37.4298192
+            ],
+            [
+              -5.7874239,
+              37.4290609
+            ],
+            [
+              -5.7885504,
+              37.4267776
+            ],
+            [
+              -5.7885289,
+              37.4262664
+            ],
+            [
+              -5.7906532,
+              37.4262323
+            ],
+            [
+              -5.7906854,
+              37.427783
+            ],
+            [
+              -5.7912541,
+              37.4291376
+            ],
+            [
+              -5.7930672,
+              37.4291121
+            ],
+            [
+              -5.7952666,
+              37.4273144
+            ],
+            [
+              -5.7964146,
+              37.4262323
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "seville-quarry-08",
+      "properties": {
+        "id": "seville-quarry-08",
+        "region": "seville",
+        "feature_type": "quarry",
+        "label": "Cantera de El Baño",
+        "osm_id": 662432124,
+        "osm_tags": {
+          "landuse": "quarry",
+          "name": "Cantera de El Baño"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -5.9223973,
+              37.3575511
+            ],
+            [
+              -5.9221136,
+              37.3570177
+            ],
+            [
+              -5.9179756,
+              37.3558247
+            ],
+            [
+              -5.9168013,
+              37.3554862
+            ],
+            [
+              -5.9151675,
+              37.3559466
+            ],
+            [
+              -5.9140757,
+              37.355284
+            ],
+            [
+              -5.9141899,
+              37.3549828
+            ],
+            [
+              -5.9125952,
+              37.3538861
+            ],
+            [
+              -5.9122948,
+              37.352883
+            ],
+            [
+              -5.9121125,
+              37.3519917
+            ],
+            [
+              -5.9115062,
+              37.3524449
+            ],
+            [
+              -5.9103458,
+              37.3530528
+            ],
+            [
+              -5.908931,
+              37.3539965
+            ],
+            [
+              -5.9087521,
+              37.3543067
+            ],
+            [
+              -5.9071259,
+              37.3552503
+            ],
+            [
+              -5.9069958,
+              37.3563878
+            ],
+            [
+              -5.9066056,
+              37.3567886
+            ],
+            [
+              -5.9065268,
+              37.3573871
+            ],
+            [
+              -5.9067396,
+              37.3576211
+            ],
+            [
+              -5.9084066,
+              37.3580928
+            ],
+            [
+              -5.9110442,
+              37.3593205
+            ],
+            [
+              -5.9131236,
+              37.359216
+            ],
+            [
+              -5.9148139,
+              37.3592261
+            ],
+            [
+              -5.9159237,
+              37.3594283
+            ],
+            [
+              -5.9179061,
+              37.3598264
+            ],
+            [
+              -5.9189276,
+              37.3595841
+            ],
+            [
+              -5.9212509,
+              37.358235
+            ],
+            [
+              -5.9223973,
+              37.3575511
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "seville-development-09",
+      "properties": {
+        "id": "seville-development-09",
+        "region": "seville",
+        "feature_type": "development",
+        "label": "Torre Panorámica Entrenúcleos",
+        "osm_id": 237663080,
+        "osm_tags": {
+          "construction": "building",
+          "construction:building:levels": "28",
+          "construction:height": "115",
+          "landuse": "construction",
+          "name": "Torre Panorámica Entrenúcleos",
+          "wikidata": "Q136379063",
+          "wikipedia": "es:Torre Panorámica Entrenúcleos"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -5.9322921,
+              37.3145415
+            ],
+            [
+              -5.9323439,
+              37.3147215
+            ],
+            [
+              -5.9324557,
+              37.3148834
+            ],
+            [
+              -5.932619,
+              37.3150147
+            ],
+            [
+              -5.9328213,
+              37.3151055
+            ],
+            [
+              -5.9330471,
+              37.3151487
+            ],
+            [
+              -5.9332791,
+              37.3151411
+            ],
+            [
+              -5.9334876,
+              37.315083
+            ],
+            [
+              -5.9335344,
+              37.3150703
+            ],
+            [
+              -5.9336918,
+              37.3149796
+            ],
+            [
+              -5.9338409,
+              37.314838
+            ],
+            [
+              -5.9339356,
+              37.3146694
+            ],
+            [
+              -5.9339686,
+              37.3144865
+            ],
+            [
+              -5.9339374,
+              37.3143035
+            ],
+            [
+              -5.9338444,
+              37.3141343
+            ],
+            [
+              -5.9338321,
+              37.3141184
+            ],
+            [
+              -5.933794,
+              37.3140789
+            ],
+            [
+              -5.9337478,
+              37.3140325
+            ],
+            [
+              -5.9336287,
+              37.3139472
+            ],
+            [
+              -5.9334913,
+              37.3138814
+            ],
+            [
+              -5.9333407,
+              37.3138376
+            ],
+            [
+              -5.9331824,
+              37.3138174
+            ],
+            [
+              -5.9330221,
+              37.3138214
+            ],
+            [
+              -5.9328658,
+              37.3138496
+            ],
+            [
+              -5.932719,
+              37.3139009
+            ],
+            [
+              -5.9325871,
+              37.3139735
+            ],
+            [
+              -5.932475,
+              37.3140647
+            ],
+            [
+              -5.9323868,
+              37.3141711
+            ],
+            [
+              -5.9323256,
+              37.314289
+            ],
+            [
+              -5.9322936,
+              37.314414
+            ],
+            [
+              -5.9322921,
+              37.3145415
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "seville-development-10",
+      "properties": {
+        "id": "seville-development-10",
+        "region": "seville",
+        "feature_type": "development",
+        "label": "Parque Comercial Megapark",
+        "osm_id": 160726937,
+        "osm_tags": {
+          "landuse": "construction",
+          "name": "Parque Comercial Megapark"
+        },
+        "source": "OpenStreetMap contributors, via Overpass API (overpass-api.de)",
+        "source_license": "ODbL 1.0 (c) OpenStreetMap contributors",
+        "curated_at": "2026-09-03",
+        "curation_method": "Live Overpass API query (requests + explicit User-Agent header; the HTTP 406 recorded in 02-RESEARCH.md was a missing-header rejection, not a hard block) filtered to landuse=quarry / landuse=construction / power=plant+plant:source=solar ways intersecting the region AOI bbox, manually selected for size and (where available) a real name, geometry containment verified against course.config.AREAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -5.9867342,
+              37.285236
+            ],
+            [
+              -5.98467,
+              37.2848092
+            ],
+            [
+              -5.9831508,
+              37.2844848
+            ],
+            [
+              -5.9824212,
+              37.2868066
+            ],
+            [
+              -5.9815629,
+              37.2896576
+            ],
+            [
+              -5.983168,
+              37.2899136
+            ],
+            [
+              -5.9850605,
+              37.2903063
+            ],
+            [
+              -5.9859188,
+              37.2875236
+            ],
+            [
+              -5.9867342,
+              37.285236
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
