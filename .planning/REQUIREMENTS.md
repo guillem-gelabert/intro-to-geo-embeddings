@@ -138,13 +138,83 @@ Which phases cover which requirements. Populated by the roadmapper during roadma
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmap) | | |
+| ENV-01 | Phase 1 | Pending |
+| ENV-02 | Phase 1 | Pending |
+| ENV-03 | Phase 1 | Pending |
+| ENV-04 | Phase 1 | Pending |
+| ENV-05 | Phase 1 | Pending |
+| DATA-01 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Pending |
+| DATA-03 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Pending |
+| DATA-05 | Phase 2 | Pending |
+| DATA-06 | Phase 2 | Pending |
+| DATA-07 | Phase 2 | Pending |
+| DATA-08 | Phase 2 | Pending |
+| DATA-09 | Phase 2 | Pending |
+| DATA-10 | Phase 2 | Pending |
+| SIM-01 | Phase 3 | Pending |
+| SIM-02 | Phase 3 | Pending |
+| SIM-03 | Phase 3 | Pending |
+| SIM-04 | Phase 3 | Pending |
+| SIM-05 | Phase 3 | Pending |
+| SIM-06 | Phase 3 | Pending |
+| SIM-07 | Phase 3 | Pending |
+| SIM-08 | Phase 3 | Pending |
+| SIM-09 | Phase 3 | Pending |
+| SIM-10 | Phase 3 | Pending |
+| SIM-11 | Phase 3 | Pending |
+| SIM-12 | Phase 3 | Pending |
+| SIM-13 | Phase 3 | Pending |
+| EARLY-01 | Phase 4 | Pending |
+| EARLY-02 | Phase 4 | Pending |
+| EARLY-03 | Phase 4 | Pending |
+| EARLY-04 | Phase 4 | Pending |
+| EARLY-05 | Phase 4 | Pending |
+| LATE-01 | Phase 5 | Pending |
+| LATE-02 | Phase 5 | Pending |
+| LATE-03 | Phase 5 | Pending |
+| LATE-04 | Phase 5 | Pending |
+| LATE-05 | Phase 5 | Pending |
+| LATE-06 | Phase 5 | Pending |
+| EXER-01 | Phase 6 | Pending |
+| EXER-02 | Phase 6 | Pending |
+| EXER-03 | Phase 6 | Pending |
+| EXER-04 | Phase 6 | Pending |
+| EXER-05 | Phase 6 | Pending |
+| ASSESS-01 | Phase 6 | Pending |
+| ASSESS-02 | Phase 6 | Pending |
+| ASSESS-03 | Phase 6 | Pending |
+| ASSESS-04 | Phase 6 | Pending |
+| SLIDE-01 | Phase 7 | Pending |
+| SLIDE-02 | Phase 7 | Pending |
+| SLIDE-03 | Phase 7 | Pending |
+| SLIDE-04 | Phase 7 | Pending |
+| SLIDE-05 | Phase 7 | Pending |
+| SCRIPT-01 | Phase 8 | Pending |
+| SCRIPT-02 | Phase 8 | Pending |
+| SCRIPT-03 | Phase 8 | Pending |
+| SCRIPT-04 | Phase 8 | Pending |
+| SCRIPT-05 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 58 total
-- Mapped to phases: 0
-- Unmapped: 58 ⚠️ (pending roadmap)
+- Mapped to phases: 58
+- Unmapped: 0 ✓
+
+**By phase:**
+
+| Phase | Name | Requirements |
+|-------|------|--------------|
+| 1 | Repository and Environment Scaffold | ENV-01..05 (5) |
+| 2 | Frozen Two-Region Teaching Datasets | DATA-01..10 (10) |
+| 3 | Similarity Search and Classification Notebook | SIM-01..13 (13) |
+| 4 | Earlier Module Solution Notebooks | EARLY-01..05 (5) |
+| 5 | Later Module Solution Notebooks | LATE-01..06 (6) |
+| 6 | Exercise Notebooks and Assessments | EXER-01..05, ASSESS-01..04 (9) |
+| 7 | Slide Decks | SLIDE-01..05 (5) |
+| 8 | Narration Scripts | SCRIPT-01..05 (5) |
 
 ---
 *Requirements defined: 2026-09-03*
-*Last updated: 2026-09-03 after initial definition*
+*Last updated: 2026-09-03 after roadmap creation (traceability populated)*
