@@ -1,4 +1,4 @@
-"""Shared AlphaEarth (Google Satellite Embedding) dequantization helper.
+"""Shared AlphaEarth (Google Satellite Embedding) embedding-math helpers.
 
 This is the ONE place the int8-to-unit-vector dequantization formula lives.
 No other module in this project re-implements it — every consumer (live COG
@@ -6,6 +6,11 @@ readers, the extraction pipeline) imports `dequantize_aef` from here. See
 02-RESEARCH.md "Extraction Mechanics, Verified End to End" step 3 and
 PITFALLS.md Pitfall 1 for why: the quantization is non-linear, so averaging
 raw int8 values (instead of dequantizing first) silently corrupts the data.
+
+This module is also the ONE place the einsum cosine-similarity pattern
+lives (`cosine_similarity_map`, below) — the two functions share a module
+because both are "embedding math," not because they are related in any
+other way.
 """
 
 import numpy as np
@@ -45,3 +50,29 @@ def dequantize_aef(raw: np.ndarray) -> np.ndarray:
     unit = d / (norm + 1e-9)
     result = np.where(mask, np.nan, unit)
     return result.astype(np.float32)
+
+
+def cosine_similarity_map(query: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    """Cosine similarity of `query` against every row of `matrix`.
+
+    `query` has shape `(d,)`; `matrix` has shape `(n, d)` (band-last, the
+    orientation a frozen table's `A00..A63` columns come out in via
+    `course.schema.to_matrix` — the OPPOSITE orientation `dequantize_aef`
+    above expects). Returns a `(n,)` float32 array.
+
+    This function does NOT assume its inputs are already unit-norm: it
+    always divides by the actual norms, so it stays correct even if a
+    future embedding provider hands it un-normalized vectors. On this
+    course's frozen AlphaEarth data the inputs happen to already be
+    unit-norm, which is what lets the notebook demonstrate "dot product
+    equals cosine similarity" as an observation about the data — not a
+    shortcut baked into this helper.
+    """
+    if query.shape[-1] != matrix.shape[-1]:
+        raise ValueError(
+            f"query and matrix must share the embedding dimension: query "
+            f"shape {query.shape}, matrix shape {matrix.shape}"
+        )
+    dot = np.einsum("d,nd->n", query, matrix)
+    denom = np.linalg.norm(query) * np.linalg.norm(matrix, axis=1) + 1e-9
+    return (dot / denom).astype(np.float32)

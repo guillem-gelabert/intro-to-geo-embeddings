@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from course.embeddings import NODATA, dequantize_aef
+from course.embeddings import NODATA, cosine_similarity_map, dequantize_aef
 
 
 def test_dequantize_single_vector_unit_norm():
@@ -61,3 +61,61 @@ def test_dequantize_rejects_band_last_input():
     band_last = np.zeros((5, 64), dtype=np.int8)
     with pytest.raises(ValueError, match="band axis first"):
         dequantize_aef(band_last)
+
+
+def test_cosine_similarity_self_similarity_is_one():
+    rng = np.random.default_rng(3)
+    v = rng.normal(size=64).astype(np.float32)
+    v = v / np.linalg.norm(v)
+    matrix = np.tile(v, (5, 1))
+
+    result = cosine_similarity_map(v, matrix)
+
+    assert result[0] == pytest.approx(1.0, abs=1e-6)
+
+
+def test_cosine_similarity_orthogonal_vectors_score_zero():
+    a = np.zeros(64, dtype=np.float32)
+    a[0] = 1.0
+    b = np.zeros(64, dtype=np.float32)
+    b[1] = 1.0
+    matrix = b[np.newaxis, :]
+
+    result = cosine_similarity_map(a, matrix)
+
+    assert result[0] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_cosine_similarity_output_shape():
+    rng = np.random.default_rng(4)
+    query = rng.normal(size=64).astype(np.float32)
+    matrix = rng.normal(size=(7, 64)).astype(np.float32)
+
+    result = cosine_similarity_map(query, matrix)
+
+    assert result.shape == (7,)
+    assert result.dtype == np.float32
+
+
+def test_cosine_similarity_matches_naive_loop():
+    rng = np.random.default_rng(5)
+    query = rng.normal(size=64).astype(np.float32) * 3.0
+    matrix = (rng.normal(size=(10, 64)) * 2.0).astype(np.float32)
+
+    result = cosine_similarity_map(query, matrix)
+
+    naive = np.array(
+        [
+            row @ query / (np.linalg.norm(row) * np.linalg.norm(query))
+            for row in matrix
+        ]
+    )
+    assert np.allclose(result, naive, atol=1e-5)
+
+
+def test_cosine_similarity_mismatched_dims_raises():
+    query = np.zeros(64, dtype=np.float32)
+    matrix = np.zeros((5, 32), dtype=np.float32)
+
+    with pytest.raises(ValueError, match=r"\(64,\).*\(5, 32\)"):
+        cosine_similarity_map(query, matrix)
