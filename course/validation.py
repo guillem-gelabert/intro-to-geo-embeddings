@@ -63,9 +63,7 @@ def spatial_cv_report(
     metric, `n_groups`, and `n_splits`.
     """
     scoring_list = list(scoring)
-    raw = cross_validate(
-        estimator, X, y, groups=groups, cv=cv, scoring=scoring_list
-    )
+    raw = cross_validate(estimator, X, y, groups=groups, cv=cv, scoring=scoring_list)
     result: dict = {}
     for metric in scoring_list:
         key = f"test_{metric}"

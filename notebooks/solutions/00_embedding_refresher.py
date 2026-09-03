@@ -78,7 +78,9 @@ if IN_COLAB:
     # This notebook only uses core-install packages (numpy, scikit-learn,
     # matplotlib, geopandas) -- no extra pip installs needed.
     REQUIRED = {"geopandas": "geopandas"}
-    missing = [pip for mod, pip in REQUIRED.items() if importlib.util.find_spec(mod) is None]
+    missing = [
+        pip for mod, pip in REQUIRED.items() if importlib.util.find_spec(mod) is None
+    ]
     if missing:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
 

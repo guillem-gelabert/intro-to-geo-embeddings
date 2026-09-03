@@ -105,10 +105,7 @@ def test_cosine_similarity_matches_naive_loop():
     result = cosine_similarity_map(query, matrix)
 
     naive = np.array(
-        [
-            row @ query / (np.linalg.norm(row) * np.linalg.norm(query))
-            for row in matrix
-        ]
+        [row @ query / (np.linalg.norm(row) * np.linalg.norm(query)) for row in matrix]
     )
     assert np.allclose(result, naive, atol=1e-5)
 

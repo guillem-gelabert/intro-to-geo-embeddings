@@ -57,7 +57,7 @@ from pathlib import Path
 IN_COLAB = "google.colab" in sys.modules
 if IN_COLAB:
     try:
-        import course  # noqa: F401
+        import course
     except ImportError:
         # Org/repo/tag are hardcoded here (matching course.config's current
         # RELEASE_ORG/RELEASE_REPO/RELEASE_TAG) because `course` — and
@@ -78,8 +78,14 @@ if IN_COLAB:
         )
         sys.path.insert(0, "repo")
         os.chdir("repo")
-    REQUIRED = {"geopandas": "geopandas", "pyarrow": "pyarrow", "mapclassify": "mapclassify"}
-    missing = [pip for mod, pip in REQUIRED.items() if importlib.util.find_spec(mod) is None]
+    REQUIRED = {
+        "geopandas": "geopandas",
+        "pyarrow": "pyarrow",
+        "mapclassify": "mapclassify",
+    }
+    missing = [
+        pip for mod, pip in REQUIRED.items() if importlib.util.find_spec(mod) is None
+    ]
     if missing:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
 
@@ -98,7 +104,7 @@ if not IN_COLAB:
 
 import numpy as np
 
-from course.config import RANDOM_STATE, COURSE_RELEASE
+from course.config import RANDOM_STATE
 
 np.random.seed(RANDOM_STATE)
 Path("figures").mkdir(exist_ok=True)
@@ -128,8 +134,10 @@ import pandas as pd
 
 for name, gdf in [("bern", bern), ("seville", seville)]:
     n_embedding_cols = len(course.schema.embedding_cols(gdf))
-    print(f"{name}: {gdf.shape[0]} rows, {len(gdf.columns)} columns, "
-          f"{n_embedding_cols} embedding columns")
+    print(
+        f"{name}: {gdf.shape[0]} rows, {len(gdf.columns)} columns, "
+        f"{n_embedding_cols} embedding columns"
+    )
     print(sorted(gdf.columns.tolist()))
 
 class_counts = pd.DataFrame(
@@ -197,17 +205,26 @@ ranked = pd.DataFrame(
         "similarity": sims[order],
     }
 )
-print(f"query: sample_id={gdf.loc[QUERY_ID, 'sample_id']}, label={gdf.loc[QUERY_ID, 'label']!r}")
+print(
+    f"query: sample_id={gdf.loc[QUERY_ID, 'sample_id']}, label={gdf.loc[QUERY_ID, 'label']!r}"
+)
 print(ranked)
 
 # %%
 fig, ax = plt.subplots(figsize=(6, 6))
 ax.scatter(gdf["lon"], gdf["lat"], s=6, c="lightgray", label="all points")
 top_k_rows = gdf.iloc[order]
-ax.scatter(top_k_rows["lon"], top_k_rows["lat"], s=30, c="tab:orange", label=f"top-{K} matches")
 ax.scatter(
-    gdf.loc[QUERY_ID, "lon"], gdf.loc[QUERY_ID, "lat"],
-    s=200, marker="*", c="tab:red", edgecolors="black", label="query",
+    top_k_rows["lon"], top_k_rows["lat"], s=30, c="tab:orange", label=f"top-{K} matches"
+)
+ax.scatter(
+    gdf.loc[QUERY_ID, "lon"],
+    gdf.loc[QUERY_ID, "lat"],
+    s=200,
+    marker="*",
+    c="tab:red",
+    edgecolors="black",
+    label="query",
 )
 ax.set_title(f"{QUERY_REGION}: top-{K} matches for query {QUERY_ID}")
 ax.legend(loc="upper right", fontsize="small")
@@ -283,7 +300,9 @@ def precision_at_k(
 
 
 target_label = gdf.loc[QUERY_ID, "label"]
-precision_single = precision_at_k(sims, gdf["label"].to_numpy(), target_label, K, exclude_idx=QUERY_ID)
+precision_single = precision_at_k(
+    sims, gdf["label"].to_numpy(), target_label, K, exclude_idx=QUERY_ID
+)
 print(f"single-pixel precision@{K} vs label {target_label!r}: {precision_single:.2f}")
 
 # %% tags=["parameters"]
@@ -314,19 +333,27 @@ within_mask = points_proj.geometry.within(buffered).to_numpy()
 contributing = gdf.loc[within_mask]
 
 if len(contributing) < 3:
-    print(f"WARNING: only {len(contributing)} points within 300m of {POLYGON_ID}; "
-          "falling back to the 5 nearest points to its centroid")
+    print(
+        f"WARNING: only {len(contributing)} points within 300m of {POLYGON_ID}; "
+        "falling back to the 5 nearest points to its centroid"
+    )
     dists = points_proj.geometry.distance(polygon_proj.centroid)
     contributing = gdf.loc[dists.nsmallest(5).index]
-print(f"{len(contributing)} points contribute to the {POLYGON_ID} polygon-mean prototype")
+print(
+    f"{len(contributing)} points contribute to the {POLYGON_ID} polygon-mean prototype"
+)
 
 # %%
 positive_centroid_raw = course.schema.to_matrix(contributing).mean(axis=0)
 positive_centroid = positive_centroid_raw / np.linalg.norm(positive_centroid_raw)
 
 sims_polygon = cosine_similarity_map(positive_centroid, matrix)
-precision_polygon = precision_at_k(sims_polygon, gdf["label"].to_numpy(), target_label, K)
-print(f"polygon-mean prototype precision@{K} vs label {target_label!r}: {precision_polygon:.2f}")
+precision_polygon = precision_at_k(
+    sims_polygon, gdf["label"].to_numpy(), target_label, K
+)
+print(
+    f"polygon-mean prototype precision@{K} vs label {target_label!r}: {precision_polygon:.2f}"
+)
 
 # %% [markdown]
 # ## Similarity 3: Positive-minus-negative prototype (optional)
@@ -350,7 +377,9 @@ pos_minus_neg_raw = positive_centroid - negative_centroid_raw
 pos_minus_neg = pos_minus_neg_raw / np.linalg.norm(pos_minus_neg_raw)
 
 sims_pos_neg = cosine_similarity_map(pos_minus_neg, matrix)
-precision_pos_neg = precision_at_k(sims_pos_neg, gdf["label"].to_numpy(), target_label, K)
+precision_pos_neg = precision_at_k(
+    sims_pos_neg, gdf["label"].to_numpy(), target_label, K
+)
 print(
     f"positive-minus-negative (vs {negative_label!r}) prototype precision@{K} "
     f"vs label {target_label!r}: {precision_pos_neg:.2f}"
@@ -366,7 +395,11 @@ comparison = pd.DataFrame(
 print(comparison)
 
 fig, ax = plt.subplots(figsize=(6, 4))
-ax.bar(comparison["query_design"], comparison[f"precision@{K}"], color=["tab:blue", "tab:orange", "tab:green"])
+ax.bar(
+    comparison["query_design"],
+    comparison[f"precision@{K}"],
+    color=["tab:blue", "tab:orange", "tab:green"],
+)
 ax.set_ylabel(f"precision@{K}")
 ax.set_ylim(0, 1)
 ax.set_title(f"Query design comparison (target label: {target_label!r})")
@@ -590,7 +623,9 @@ ax.set_xticks(x + bar_width / 2)
 ax.set_xticklabels(scenarios)
 ax.set_ylabel("balanced accuracy")
 ax.set_ylim(0, 1)
-ax.set_title("Leave-region-out is the dramatic gap; in-region block CV is a smaller one")
+ax.set_title(
+    "Leave-region-out is the dramatic gap; in-region block CV is a smaller one"
+)
 ax.legend()
 fig.tight_layout()
 fig.savefig("figures/02_cv_comparison_bar_chart.png")
@@ -614,7 +649,9 @@ seville_true = y_all[test_idx]
 report_df = pd.DataFrame(
     classification_report(seville_true, seville_pred, output_dict=True)
 ).T
-print("Per-class precision/recall, leave-region-out (train Bern, predict Seville, random_forest):")
+print(
+    "Per-class precision/recall, leave-region-out (train Bern, predict Seville, random_forest):"
+)
 print(report_df)
 
 # %%
@@ -623,12 +660,20 @@ correct = seville_pred == seville_true
 
 fig, ax = plt.subplots(figsize=(6, 6))
 ax.scatter(
-    seville_eval.loc[correct, "lon"], seville_eval.loc[correct, "lat"],
-    s=8, c="tab:green", label="correct", alpha=0.6,
+    seville_eval.loc[correct, "lon"],
+    seville_eval.loc[correct, "lat"],
+    s=8,
+    c="tab:green",
+    label="correct",
+    alpha=0.6,
 )
 ax.scatter(
-    seville_eval.loc[~correct, "lon"], seville_eval.loc[~correct, "lat"],
-    s=8, c="tab:red", label="incorrect", alpha=0.6,
+    seville_eval.loc[~correct, "lon"],
+    seville_eval.loc[~correct, "lat"],
+    s=8,
+    c="tab:red",
+    label="incorrect",
+    alpha=0.6,
 )
 ax.set_title("Seville errors under leave-region-out (train Bern, random_forest)")
 ax.set_xlabel("lon")
@@ -676,7 +721,9 @@ print(
 
 X_bern_s2 = bern_clf_s2[S2_COLS].to_numpy(np.float32)
 y_bern_s2 = bern_clf_s2["label"].to_numpy()
-groups_block_s2 = make_blocks(bern_clf_s2.to_crs("EPSG:2056"), block_size_m=BLOCK_SIZE_M)
+groups_block_s2 = make_blocks(
+    bern_clf_s2.to_crs("EPSG:2056"), block_size_m=BLOCK_SIZE_M
+)
 
 X_all_s2 = combined_s2[S2_COLS].to_numpy(np.float32)
 y_all_s2 = combined_s2["label"].to_numpy()
@@ -701,13 +748,20 @@ s2_models = {
 s2_trap, s2_block, s2_lro = {}, {}, {}
 for name, model in s2_models.items():
     Xtr, Xte, ytr, yte = train_test_split(
-        X_bern_s2, y_bern_s2, test_size=0.3, random_state=RANDOM_STATE, stratify=y_bern_s2
+        X_bern_s2,
+        y_bern_s2,
+        test_size=0.3,
+        random_state=RANDOM_STATE,
+        stratify=y_bern_s2,
     )
     model.fit(Xtr, ytr)
     s2_trap[name] = balanced_accuracy_score(yte, model.predict(Xte))
 
     s2_block[name] = spatial_cv_report(
-        model, X_bern_s2, y_bern_s2, groups=groups_block_s2,
+        model,
+        X_bern_s2,
+        y_bern_s2,
+        groups=groups_block_s2,
         cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
     )["mean_balanced_accuracy"]
 
