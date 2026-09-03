@@ -37,7 +37,11 @@ test-network:
 # Security Domain, Known Threat Patterns.
 execute-notebooks:
 	@shopt -s nullglob; \
-	files=($(NOTEBOOKS_DIR)/*.ipynb); \
+	files=(); \
+	for f in $(NOTEBOOKS_DIR)/*.ipynb; do \
+		case "$$(basename "$$f")" in executed_*) continue;; esac; \
+		files+=("$$f"); \
+	done; \
 	if [ $${#files[@]} -eq 0 ]; then \
 		echo "No solution notebooks found yet (expected before Phase 3)."; \
 		exit 0; \
