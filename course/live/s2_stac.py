@@ -66,11 +66,22 @@ def _item_cloud_cover(item: dict) -> float:
     return item["properties"]["eo:cloud_cover"]
 
 
+# May-September at cloud < 20% rather than June-August at < 10%. The tighter
+# window left Bern 2024 with only two scenes, both in S2 tile 32TLS and none in
+# 32TLT, so 1247 of 2050 points (61%) got zero observations and no Sentinel-2
+# baseline. Measured live for that AOI and year: (6,8)/10% finds 2 items on one
+# tile; (6,8)/20% finds 4 across both; (5,9)/20% finds 8 across both. Per-pixel
+# SCL masking still discards actual cloud, so the looser scene-level threshold
+# mainly buys spatial coverage rather than admitting cloudy pixels.
+DEFAULT_MONTHS = (5, 9)
+DEFAULT_CLOUD_LT = 20.0
+
+
 def search_scenes(
     bbox_4326: tuple,
     year: int,
-    months: tuple[int, int] = (6, 8),
-    cloud_lt: float = 10.0,
+    months: tuple[int, int] = DEFAULT_MONTHS,
+    cloud_lt: float = DEFAULT_CLOUD_LT,
 ) -> list[dict]:
     """POST a Sentinel-2 L2A scene search to Earth Search STAC.
 
@@ -116,22 +127,49 @@ def search_scenes(
     return features
 
 
-def select_scenes(items: list[dict]) -> list[dict]:
-    """Deterministically resolve duplicate same-date archive items.
+def _item_tile(item: dict) -> str:
+    """MGRS tile id for a Sentinel-2 item, e.g. `32TLS`.
 
-    Groups items by acquisition date. Within a date-group with more than one
-    item: for dates before 2022-01-25, prefer the item whose `id` contains
-    `_0_` (original processing); otherwise prefer the lowest `eo:cloud_cover`.
-    Ties are broken by sorting `id` ascending. Returns one item per unique
-    date, sorted by `eo:cloud_cover` ascending overall.
+    Prefer explicit STAC properties; fall back to the second underscore-
+    separated field of the item id (`S2B_32TLS_20180828_0_L2A`).
     """
-    groups: dict[date, list[dict]] = {}
+    props = item.get("properties", {})
+    for key in ("s2:mgrs_tile", "grid:code"):
+        value = props.get(key)
+        if value:
+            return str(value).replace("MGRS-", "")
+    # Real Earth Search ids always carry the tile here; an id of another shape
+    # gets a single shared bucket, which reduces grouping to date-only rather
+    # than raising on data this helper only inspects opportunistically.
+    parts = item["id"].split("_")
+    return parts[1] if len(parts) > 1 else ""
+
+
+def select_scenes(items: list[dict]) -> list[dict]:
+    """Deterministically resolve duplicate archive items of the same scene.
+
+    Groups items by (acquisition date, MGRS tile). Within a group with more
+    than one item: for dates before 2022-01-25, prefer the item whose `id`
+    contains `_0_` (original processing); otherwise prefer the lowest
+    `eo:cloud_cover`. Ties are broken by sorting `id` ascending. Returns one
+    item per (date, tile), sorted by `eo:cloud_cover` ascending overall.
+
+    Grouping includes the tile, not just the date. Sentinel-2 images adjacent
+    tiles on a single overpass, so scenes covering different parts of one AOI
+    routinely share an acquisition date. Grouping by date alone treated those
+    as duplicates of each other and discarded all but one, silently dropping a
+    whole tile's worth of coverage: Bern spans 32TLS and 32TLT, and every
+    same-date 32TLT scene was being thrown away, leaving 1247 of 2050 points
+    with no observations at all. Reprocessed duplicates -- what this function
+    exists to resolve -- share both the date and the tile.
+    """
+    groups: dict[tuple[date, str], list[dict]] = {}
     for item in items:
-        acquisition_date = _item_datetime(item).date()
-        groups.setdefault(acquisition_date, []).append(item)
+        key = (_item_datetime(item).date(), _item_tile(item))
+        groups.setdefault(key, []).append(item)
 
     selected: list[dict] = []
-    for acquisition_date, group in groups.items():
+    for (acquisition_date, _tile), group in groups.items():
         if len(group) == 1:
             selected.append(group[0])
             continue

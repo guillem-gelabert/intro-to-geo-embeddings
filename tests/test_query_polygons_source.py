@@ -18,7 +18,9 @@ from shapely.geometry import shape
 
 from course.config import AREAS
 
-GEOJSON_PATH = Path(__file__).resolve().parent.parent / "data" / "query_polygons.geojson"
+GEOJSON_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "query_polygons.geojson"
+)
 
 
 @pytest.fixture(scope="module")

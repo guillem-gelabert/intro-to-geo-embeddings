@@ -33,6 +33,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
@@ -101,7 +102,39 @@ def assemble_table(
     result = gpd.GeoDataFrame(
         attrs, geometry=geometry, crs=sample_points.crs
     ).reset_index(drop=True)
+    _assert_embeddings_present(result)
     return result
+
+
+# Tolerance, not zero: an isolated nodata pixel inside an otherwise-covered AOI
+# is plausible. A systematic miss is not, and that is what this catches.
+MAX_NAN_EMBEDDING_FRACTION = 0.02
+
+
+def _assert_embeddings_present(table: gpd.GeoDataFrame) -> None:
+    """Refuse to build a table whose embeddings are substantially NaN.
+
+    The first Seville build wrote 448 of 2050 rows (21.9%) with every
+    embedding NaN, in all three years, because the AOI crossed an AlphaEarth
+    tile boundary and the points past that edge read as -128 nodata. Nothing
+    in the pipeline objected; the defect only surfaced when a classifier
+    refused the data much later. An AOI that misses its tile is a
+    configuration error, so fail here rather than write a table that looks
+    valid and is not.
+    """
+    values = table[list(A_COLS)].to_numpy(dtype="float32")
+    nan_rows = np.isnan(values).any(axis=1)
+    fraction = float(nan_rows.mean())
+    if fraction > MAX_NAN_EMBEDDING_FRACTION:
+        lons = table.loc[nan_rows, "lon"]
+        raise ValueError(
+            f"{nan_rows.sum()} of {len(table)} rows ({fraction:.1%}) have NaN "
+            f"embeddings, above the {MAX_NAN_EMBEDDING_FRACTION:.0%} tolerance. "
+            f"Affected longitudes span {lons.min():.4f}..{lons.max():.4f}. "
+            "This usually means the AOI extends past the edge of the single "
+            "AlphaEarth tile being read -- check the bbox in course.config.AREAS "
+            "against the tile bounds in aef_index.parquet."
+        )
 
 
 def write_table(gdf: gpd.GeoDataFrame, path: Path, provenance: dict) -> None:

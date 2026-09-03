@@ -171,3 +171,17 @@ def test_sample_bands_end_to_end_bern_2021():
 
     assert list(result.columns) == [*S2_COLS, "s2_n_scenes"]
     assert len(result) == len(points)
+
+
+def test_select_scenes_keeps_same_date_scenes_from_different_tiles():
+    """Sentinel-2 images adjacent tiles on one overpass, so scenes covering
+    different parts of an AOI share an acquisition date. Grouping by date
+    alone treated those as duplicates and dropped a whole tile's coverage."""
+    items = [
+        _make_item("S2B_32TLS_20210723_0_L2A", "2021-07-23T10:00:00Z", 4.0),
+        _make_item("S2B_32TLT_20210723_0_L2A", "2021-07-23T10:00:00Z", 6.0),
+    ]
+
+    result = select_scenes(items)
+
+    assert {item["id"].split("_")[1] for item in result} == {"32TLS", "32TLT"}

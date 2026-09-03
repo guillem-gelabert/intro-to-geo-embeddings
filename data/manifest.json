@@ -1,0 +1,38 @@
+{
+  "bern_aef_2018_v1.1.parquet": {
+    "sha256": "a49682fc56189bedc122af3fe004629c743e46242b76e6ae5de41f80008e95e6",
+    "rows": 2050,
+    "built_at": "2026-09-03T22:41:09.467232+00:00",
+    "builder_git_sha": "75177c764ac7f7f2037212e548a96d6729a4b908"
+  },
+  "bern_aef_2021_v1.1.parquet": {
+    "sha256": "5cf9b2770fadd029b8767c3301d6658a1c6bd5dcdac381ee166c84691d2fb097",
+    "rows": 2050,
+    "built_at": "2026-09-03T22:41:09.467232+00:00",
+    "builder_git_sha": "75177c764ac7f7f2037212e548a96d6729a4b908"
+  },
+  "bern_aef_2024_v1.1.parquet": {
+    "sha256": "f19ffc47c1b83923adf78ebd7bcf88235554b0b3007ca8e44232da56a282d419",
+    "rows": 2050,
+    "built_at": "2026-09-03T22:41:09.467232+00:00",
+    "builder_git_sha": "75177c764ac7f7f2037212e548a96d6729a4b908"
+  },
+  "seville_aef_2018_v1.1.parquet": {
+    "sha256": "bd44f2545361d0340ba46e8a6028849919d35a99df8eb411ed2b951d536d3b69",
+    "rows": 2050,
+    "built_at": "2026-09-03T22:41:09.467232+00:00",
+    "builder_git_sha": "75177c764ac7f7f2037212e548a96d6729a4b908"
+  },
+  "seville_aef_2021_v1.1.parquet": {
+    "sha256": "28c8e46caeeccfa8b981e7f6e1ce98814e91e8773e3b6ed18d99e2bf5ee933f8",
+    "rows": 2050,
+    "built_at": "2026-09-03T22:41:09.467232+00:00",
+    "builder_git_sha": "75177c764ac7f7f2037212e548a96d6729a4b908"
+  },
+  "seville_aef_2024_v1.1.parquet": {
+    "sha256": "38978f706641b9da3f6e9762f982480c0480f78c8dd88adea457a5269e7ab072",
+    "rows": 2050,
+    "built_at": "2026-09-03T22:41:09.467232+00:00",
+    "builder_git_sha": "75177c764ac7f7f2037212e548a96d6729a4b908"
+  }
+}
