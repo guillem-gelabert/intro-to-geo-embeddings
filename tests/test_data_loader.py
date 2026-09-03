@@ -60,7 +60,7 @@ def _write_frozen_parquet(gdf, path, provenance):
     pq.write_table(table.replace_schema_metadata(meta), path)
 
 
-def test_local_hit_reads_directly_with_no_network_call(tmp_path, monkeypatch):
+def test_local_hit_reads_directly_without_remote_fetch(tmp_path, monkeypatch):
     area, year = "bern", 2021
     gdf = _frozen_gdf(area, year)
     filename = f"{area}_aef_{year}_v1.1.parquet"
