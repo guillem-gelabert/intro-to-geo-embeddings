@@ -84,7 +84,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Human checkpoint | Plan 01-05 — time the Colab bootstrap install on a fresh Colab CPU runtime and record the numpy/pandas/scikit-learn versions it ships. Blocking gate for Phase 01 closeout; cannot be automated (needs a live browser session). Everything else in Phase 01 is verified by automated tests. | Open | Phase 01, wave 3 |
 
 ## Session Continuity
 
