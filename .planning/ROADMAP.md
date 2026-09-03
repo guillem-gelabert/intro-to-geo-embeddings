@@ -93,7 +93,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-06-PLAN.md — stratified sample design: WorldCover-based strata, min-spacing, block_id, stable sample_id
+- [x] 02-06-PLAN.md — stratified sample design: WorldCover-based strata, min-spacing, block_id, stable sample_id
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -214,7 +214,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
-| 2. Frozen Two-Region Teaching Datasets | 5/12 | In Progress|  |
+| 2. Frozen Two-Region Teaching Datasets | 6/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 0/TBD | Not started | - |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
