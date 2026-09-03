@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from course.live import LiveSourceUnavailable
 from course.schema import S2_COLS
 from pipeline import attach_s2 as attach_s2_module
 from pipeline.attach_s2 import attach_s2
@@ -74,6 +75,54 @@ def test_attach_s2_preserves_point_order(monkeypatch):
 
     assert list(result["sample_id"]) == [40, 10, 30, 20, 0]
     assert list(result.columns) == ["sample_id", *S2_COLS, "s2_n_scenes"]
+
+
+# --- Task 2: non-network edge case tests -----------------------------------
+
+
+def test_attach_s2_raises_live_source_unavailable_on_zero_scenes(monkeypatch):
+    """search_scenes (mocked) returns zero scenes -- attach_s2 must raise
+    LiveSourceUnavailable naming the area/year rather than propagate an
+    empty-list error out of sample_bands or silently return NaN-filled
+    bands."""
+
+    def _unexpected_sample_bands(*args, **kwargs):
+        raise AssertionError("sample_bands should not be called with zero scenes")
+
+    monkeypatch.setattr(attach_s2_module, "search_scenes", lambda *a, **k: [])
+    monkeypatch.setattr(attach_s2_module, "select_scenes", lambda items: items)
+    monkeypatch.setattr(attach_s2_module, "sample_bands", _unexpected_sample_bands)
+
+    with pytest.raises(LiveSourceUnavailable, match="bern.*2021"):
+        attach_s2("bern", 2021, _points(3))
+
+
+def test_attach_s2_never_drops_rows_on_partial_coverage(monkeypatch):
+    """When the returned scenes only cover some of the requested points,
+    attach_s2 must still return exactly len(points) rows, with
+    s2_n_scenes == 0 and NaN band values for the uncovered points -- never
+    dropping a row."""
+    n = 5
+    partial = _fake_bands_df(n)
+    # Points 3 and 4 fall outside the returned scenes' actual coverage.
+    for col in S2_COLS:
+        partial.loc[3:4, col] = np.nan
+    partial.loc[3:4, "s2_n_scenes"] = 0
+
+    monkeypatch.setattr(
+        attach_s2_module, "search_scenes", lambda *a, **k: [{"id": "x"}]
+    )
+    monkeypatch.setattr(attach_s2_module, "select_scenes", lambda items: items)
+    monkeypatch.setattr(
+        attach_s2_module, "sample_bands", lambda items, points_lonlat, *a, **k: partial
+    )
+
+    result = attach_s2("bern", 2021, _points(n))
+
+    assert len(result) == n
+    assert (result.loc[3:4, "s2_n_scenes"] == 0).all()
+    assert result.loc[3:4, S2_COLS].isna().all().all()
+    assert result.loc[0:2, S2_COLS].notna().all().all()
 
 
 @pytest.mark.network
