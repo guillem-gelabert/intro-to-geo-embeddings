@@ -522,19 +522,22 @@ All code blocks under "Extraction Mechanics, Verified End to End" above are draw
 
 **If this table is empty:** N/A — see entries above. All are LOW-to-MEDIUM risk and none block Phase 2 planning; A3 is the only one requiring a concrete build-time fallback decision.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does the leave-region-out gap hold up on the *final* frozen sample (not this session's ad hoc 1,900-point test sample)?**
+All three are addressed by concrete tasks in the Phase 2 plans; resolutions noted inline.
+
+
+1. **RESOLVED (Plan 02-12's aliveness test runs against the committed tables): Does the leave-region-out gap hold up on the *final* frozen sample (not this session's ad hoc 1,900-point test sample)?**
    - What we know: measured 21–28 points on a stratified sample drawn the same way the final pipeline plans to sample.
    - What's unclear: the final sample will use a different random seed, possibly different point counts, and points drawn from all three anchor years rather than 2021 only.
    - Recommendation: re-run the exact dataset-aliveness guard test (Validation Architecture section) against the actual committed frozen tables once built, as part of Phase 2's own closeout — not deferred to Phase 3.
 
-2. **What is the true cause of the Sentinel-2 offset metadata discrepancy?**
+2. **RESOLVED (Plan 02-04 implements the defensive plausibility assertion regardless of root cause): What is the true cause of the Sentinel-2 offset metadata discrepancy?**
    - What we know: empirically, applying the documented offset produces implausible reflectance across three different-baseline scenes at the same point; not applying it produces consistent, plausible values.
    - What's unclear: whether this is specific to the `sentinel-s2-l2a-cogs` bucket path, specific to reprocessed-duplicate items, or a broader Earth Search convention.
    - Recommendation: implement the defensive plausibility-assertion pattern regardless (Extraction Mechanics §6) so the pipeline is correct either way; do not spend further research time resolving the root cause unless a future scene shows the assertion failing.
 
-3. **DATA-10 candidate query polygons — what is the actual working method?**
+3. **RESOLVED (Plan 02-10 Task 2 tries Overpass then falls back to manual curation): DATA-10 candidate query polygons — what is the actual working method?**
    - What we know: Overpass API returned HTTP 406 this session for both plain and User-Agent-customized requests.
    - What's unclear: whether this is a transient block, a rate limit, or a header requirement not yet identified.
    - Recommendation: at build time, either retry with the `overpy` Python client (handles Overpass's quirks better than raw `requests`) or manually curate 3–5 polygons (a solar farm, a quarry, a construction/new-development site) by visual inspection of the already-fetched WorldCover/Sentinel-2 imagery for both regions — this is a small, boundable task either way and should not block the rest of the pipeline.
