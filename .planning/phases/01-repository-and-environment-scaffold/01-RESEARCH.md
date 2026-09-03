@@ -433,19 +433,23 @@ np.random.seed(RANDOM_STATE)
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should `.github/workflows/ci.yml` exist at all in Phase 1, even as a stub?**
+All three were resolved by the orchestrator before planning and are implemented in the Phase 1 plans.
+
+1. **RESOLVED: Should `.github/workflows/ci.yml` exist at all in Phase 1, even as a stub?**
+   No. REQUIREMENTS.md defers GitHub Actions CI to `ENV-06` in v2. Phase 1 ships local pre-commit hooks and Makefile targets only. Verified: no `.github/workflows/` path appears in any plan.
    - What we know: REQUIREMENTS.md lists GitHub Actions CI as `ENV-06`, explicitly v2/deferred. ARCHITECTURE.md's illustrative repo tree includes it anyway, and Anti-Pattern 2 in ARCHITECTURE.md references "CI" enforcement of the exercise-drift check.
    - What's unclear: whether "CI" in ARCHITECTURE.md's prose means "a GitHub Actions workflow" (deferred) or "the same checks, run locally via pre-commit/Makefile, that could *later* be lifted into a workflow" (in scope now).
    - Recommendation: build the checks as local pre-commit hooks + Makefile targets now (satisfies the *substance* of ARCHITECTURE.md's enforcement intent), and explicitly do not create `.github/workflows/`. Flag `ENV-06` as the natural home for wiring the exact same commands into a GitHub Actions runner later.
 
-2. **Does Phase 1's README "list every notebook with an Open-in-Colab badge" success criterion (SC5) apply vacuously (zero notebooks) or does it require a populated stub table?**
+2. **RESOLVED: Does Phase 1's README "list every notebook with an Open-in-Colab badge" success criterion (SC5) apply vacuously (zero notebooks) or does it require a populated stub table?**
+   Ship the banner verbatim, the local run instructions, the licence section, and an empty Notebooks table with its header row and documented badge-URL template. Later phases append rows; no rows are fabricated for notebooks that do not exist. Implemented in plan 01-02.
    - What we know: Phase 1 ships zero notebooks (Phase 3 ships the first one). ENV-03's literal wording assumes notebooks already exist ("The README lists every notebook...").
    - What's unclear: whether the plan-checker/verifier will treat "table exists with a header row and zero data rows, ready for Phase 3+ to append to" as satisfying SC5, or whether it expects something more.
    - Recommendation: Phase 1 should deliver the banner (exact text, verified verbatim per ENV-03), the license section pre-populated with what's already known today (AlphaEarth CC BY 4.0 + exact attribution sentence, per PITFALLS.md Pitfall 13 — these facts don't depend on data existing yet), local run instructions, and an empty "Notebooks" table with the Colab badge URL pattern documented as a comment/template row. Each later phase's plan should include a task to append its notebook's row — this should be called out explicitly as a recurring task in Phases 3–5's future plans, not assumed automatic.
 
-3. **Exact `RANDOM_STATE`/`COURSE_RELEASE` constant values** — `RANDOM_STATE = 42` and `COURSE_RELEASE = "2026.08"` are used consistently across STACK.md/ARCHITECTURE.md's snippets; treat as settled (not actually open) but flagging that Phase 1's `course/config.py` is the single place these get defined, and every later phase's Setup cell must import them from there rather than re-hardcoding.
+3. **RESOLVED: Exact `RANDOM_STATE`/`COURSE_RELEASE` constant values** — `RANDOM_STATE = 42` and `COURSE_RELEASE = "2026.08"` are used consistently across STACK.md/ARCHITECTURE.md's snippets; treat as settled (not actually open) but flagging that Phase 1's `course/config.py` is the single place these get defined, and every later phase's Setup cell must import them from there rather than re-hardcoding.
 
 ---
 
