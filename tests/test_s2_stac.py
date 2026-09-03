@@ -113,3 +113,68 @@ def test_search_scenes_posts_valid_rfc3339_datetime_range(monkeypatch):
 
     assert captured["url"] == STAC_SEARCH_URL
     assert captured["json"]["datetime"] == "2021-06-01T00:00:00Z/2021-06-30T23:59:59Z"
+
+
+# --- Task 2: sample_bands helpers -----------------------------------------
+
+
+def test_apply_scale_multiplies_dn_by_scale_no_offset_subtraction():
+    import numpy as np
+
+    from course.live.s2_stac import _apply_scale
+
+    dn = np.array([1000.0, 1500.0, 2000.0], dtype=np.float64)
+    scale = 0.0001
+
+    result = _apply_scale(dn, scale)
+
+    assert result == pytest.approx(dn * scale, rel=1e-6)
+
+
+def test_plausibility_assertion_fires_on_implausible_mean():
+    import numpy as np
+
+    from course.live.s2_stac import _assert_plausible_reflectance
+
+    implausible = np.full((5, 6), -0.3, dtype=np.float64)
+
+    with pytest.raises(AssertionError):
+        _assert_plausible_reflectance(implausible)
+
+
+def test_plausibility_assertion_passes_on_plausible_mean():
+    import numpy as np
+
+    from course.live.s2_stac import _assert_plausible_reflectance
+
+    plausible = np.full((5, 6), 0.15, dtype=np.float64)
+
+    _assert_plausible_reflectance(plausible)  # must not raise
+
+
+# --- Task 2: sample_bands end to end (network) -----------------------------
+
+
+@pytest.mark.network
+def test_sample_bands_end_to_end_bern_2021():
+    import numpy as np
+
+    from course.live.s2_stac import sample_bands
+    from course.schema import S2_COLS
+
+    bbox = (7.446, 46.946, 7.450, 46.950)  # tiny AOI inside the Bern region
+    items = search_scenes(bbox, 2021, months=(7, 7), cloud_lt=10.0)
+    selected = select_scenes(items)[:2]  # keep the network test small
+
+    points = np.array(
+        [
+            [7.4474, 46.9480],
+            [7.4480, 46.9475],
+            [7.4468, 46.9485],
+        ]
+    )
+
+    result = sample_bands(selected, points)
+
+    assert list(result.columns) == [*S2_COLS, "s2_n_scenes"]
+    assert len(result) == len(points)
