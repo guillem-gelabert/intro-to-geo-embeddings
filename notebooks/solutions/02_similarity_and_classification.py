@@ -245,3 +245,140 @@ print(
 # plus **precision@k** (introduced next), is the honest alternative: it
 # asks how good the top-K matches are, which is exactly the question a
 # search-by-example workflow actually needs answered.
+
+# %% [markdown]
+# ## Similarity 2: Prototype queries
+#
+# A single pixel is noisy — one point can sit right on a boundary, under a
+# cloud-shadow artifact, or just be an unlucky sample. A **prototype**
+# query averages several points that are known examples of what you are
+# looking for, which trades away single-pixel precision for stability.
+#
+# The raw mean of several unit-norm embedding vectors is **not itself
+# unit-norm** — averaging shrinks the vector toward the origin whenever the
+# inputs disagree even slightly in direction. Renormalizing (dividing by
+# the mean's own norm) is required, not optional, to get back a valid
+# query vector that `cosine_similarity_map` can compare on equal footing
+# with everything else in this notebook.
+
+
+# %%
+def precision_at_k(
+    sims: np.ndarray,
+    labels: np.ndarray,
+    target_label: str,
+    k: int,
+    exclude_idx: int | None = None,
+) -> float:
+    """Fraction of the top-k ranked (by `sims`) points whose label matches
+    `target_label`. `exclude_idx` drops a self-match (e.g. the query point
+    itself) from the ranking before taking the top-k."""
+    order = np.argsort(-sims)
+    if exclude_idx is not None:
+        order = order[order != exclude_idx]
+    top_k = order[:k]
+    return float((labels[top_k] == target_label).mean())
+
+
+target_label = gdf.loc[QUERY_ID, "label"]
+precision_single = precision_at_k(sims, gdf["label"].to_numpy(), target_label, K, exclude_idx=QUERY_ID)
+print(f"single-pixel precision@{K} vs label {target_label!r}: {precision_single:.2f}")
+
+# %% tags=["parameters"]
+POLYGON_ID = "bern-quarry-01"  # EDIT ME
+
+# %%
+import geopandas as gpd
+
+polygons = gpd.read_file("data/query_polygons.geojson")
+selected = polygons.loc[polygons["id"] == POLYGON_ID]
+if selected.empty:
+    raise KeyError(
+        f"POLYGON_ID={POLYGON_ID!r} not found in data/query_polygons.geojson; "
+        f"valid ids: {sorted(polygons['id'])}"
+    )
+polygon_region = selected.iloc[0]["region"]
+assert polygon_region == QUERY_REGION, (
+    f"POLYGON_ID={POLYGON_ID!r} is in region {polygon_region!r}, but "
+    f"QUERY_REGION={QUERY_REGION!r}; pick a polygon in the same region for "
+    "this comparison to be meaningful"
+)
+
+epsg = AREAS[polygon_region]["epsg"]
+polygon_proj = selected.to_crs(epsg).geometry.iloc[0]
+points_proj = gdf.to_crs(epsg)
+buffered = polygon_proj.buffer(300)
+within_mask = points_proj.geometry.within(buffered).to_numpy()
+contributing = gdf.loc[within_mask]
+
+if len(contributing) < 3:
+    print(f"WARNING: only {len(contributing)} points within 300m of {POLYGON_ID}; "
+          "falling back to the 5 nearest points to its centroid")
+    dists = points_proj.geometry.distance(polygon_proj.centroid)
+    contributing = gdf.loc[dists.nsmallest(5).index]
+print(f"{len(contributing)} points contribute to the {POLYGON_ID} polygon-mean prototype")
+
+# %%
+positive_centroid_raw = course.schema.to_matrix(contributing).mean(axis=0)
+positive_centroid = positive_centroid_raw / np.linalg.norm(positive_centroid_raw)
+
+sims_polygon = cosine_similarity_map(positive_centroid, matrix)
+precision_polygon = precision_at_k(sims_polygon, gdf["label"].to_numpy(), target_label, K)
+print(f"polygon-mean prototype precision@{K} vs label {target_label!r}: {precision_polygon:.2f}")
+
+# %% [markdown]
+# ## Similarity 3: Positive-minus-negative prototype (optional)
+#
+# A positive prototype alone can still drift toward whatever is common
+# everywhere (shared soil signal, shared illumination). Subtracting a
+# **negative** centroid — the mean of points known to be a *different*
+# class — sharpens the query toward what is distinctive about the positive
+# examples, not just present in them.
+
+# %%
+rng = np.random.default_rng(RANDOM_STATE)
+other_labels = [label for label in gdf["label"].unique() if label != target_label]
+negative_label = other_labels[0]
+negative_pool = gdf.index[gdf["label"] == negative_label].to_numpy()
+n_negative = min(len(contributing), len(negative_pool))
+negative_idx = rng.choice(negative_pool, size=n_negative, replace=False)
+
+negative_centroid_raw = course.schema.to_matrix(gdf.loc[negative_idx]).mean(axis=0)
+pos_minus_neg_raw = positive_centroid - negative_centroid_raw
+pos_minus_neg = pos_minus_neg_raw / np.linalg.norm(pos_minus_neg_raw)
+
+sims_pos_neg = cosine_similarity_map(pos_minus_neg, matrix)
+precision_pos_neg = precision_at_k(sims_pos_neg, gdf["label"].to_numpy(), target_label, K)
+print(
+    f"positive-minus-negative (vs {negative_label!r}) prototype precision@{K} "
+    f"vs label {target_label!r}: {precision_pos_neg:.2f}"
+)
+
+# %%
+comparison = pd.DataFrame(
+    {
+        "query_design": ["single-pixel", "polygon-mean", "positive-minus-negative"],
+        f"precision@{K}": [precision_single, precision_polygon, precision_pos_neg],
+    }
+)
+print(comparison)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.bar(comparison["query_design"], comparison[f"precision@{K}"], color=["tab:blue", "tab:orange", "tab:green"])
+ax.set_ylabel(f"precision@{K}")
+ax.set_ylim(0, 1)
+ax.set_title(f"Query design comparison (target label: {target_label!r})")
+fig.tight_layout()
+fig.savefig("figures/02_prototype_precision_at_k.png")
+plt.show()
+
+# %% [markdown]
+# **Takeaway:** prototype queries average out single-pixel noise, at the
+# cost of assuming the polygon is spatially homogeneous (that everything
+# inside the 300 m buffer really is an example of what you're looking
+# for). When that assumption holds, prototypes tend to be at least as
+# stable as the single-pixel query above; when a polygon straddles a
+# boundary or mixes land-cover types, its mean is diluted and the
+# single-pixel query can win instead. There is no query design that is
+# unconditionally best — that is why this notebook measures rather than
+# assumes.
