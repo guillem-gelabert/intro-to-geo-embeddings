@@ -102,7 +102,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 02-09-PLAN.md — write.py (GeoParquet + provenance + manifest), data_card.py, build.py CLI, network regen test
+- [x] 02-09-PLAN.md — write.py (GeoParquet + provenance + manifest), data_card.py, build.py CLI, network regen test
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
@@ -214,7 +214,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
-| 2. Frozen Two-Region Teaching Datasets | 8/12 | In Progress|  |
+| 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 0/TBD | Not started | - |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
