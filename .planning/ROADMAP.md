@@ -82,14 +82,14 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — dequantize_aef helper, frozen-table schema extension, study-area/version registry, network pytest marker
+- [x] 02-01-PLAN.md — dequantize_aef helper, frozen-table schema extension, study-area/version registry, network pytest marker
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — AlphaEarth COG adapter: tile lookup, windowed read, array-index point sampling
-- [ ] 02-03-PLAN.md — WorldCover label adapter and independent HRL Imperviousness 2018 reference
-- [ ] 02-04-PLAN.md — Sentinel-2 STAC adapter: scene search, dedup, SCL-masked band sampling
-- [ ] 02-05-PLAN.md — course.data local-first loader with checksum-verified remote fallback
+- [x] 02-02-PLAN.md — AlphaEarth COG adapter: tile lookup, windowed read, array-index point sampling
+- [x] 02-03-PLAN.md — WorldCover label adapter and independent HRL Imperviousness 2018 reference
+- [x] 02-04-PLAN.md — Sentinel-2 STAC adapter: scene search, dedup, SCL-masked band sampling
+- [x] 02-05-PLAN.md — course.data local-first loader with checksum-verified remote fallback
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -214,7 +214,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
-| 2. Frozen Two-Region Teaching Datasets | 0/12 | Not started | - |
+| 2. Frozen Two-Region Teaching Datasets | 5/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 0/TBD | Not started | - |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
