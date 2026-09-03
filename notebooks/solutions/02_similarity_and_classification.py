@@ -514,3 +514,132 @@ for name, model in MODELS.items():
 # within a few points of each other, not tens of points apart. That gap is
 # real and worth teaching, but it is not yet the dramatic effect this
 # notebook is building toward — that comes next, from leave-region-out.
+
+# %% [markdown]
+# ## Leave-region-out: the dramatic, honest gap
+#
+# Train on Bern only, predict Seville only — a climatically and
+# geographically distinct region the model never saw during training. This
+# reuses the *exact same* `spatial_cv_report` call shape as the block CV
+# above, changing only `groups` (now the region label) and `cv` (now
+# `LeaveOneGroupOut`), which is itself the point: the helper is genuinely
+# generic, not two different code paths dressed up to look similar.
+#
+# **Why leave-region-out is where the real gap lives, and in-region block
+# CV is not:** AlphaEarth embeddings aggregate a full year of multi-modal
+# satellite signal into every pixel, which plausibly makes them more
+# resistant to naive *adjacent-pixel* leakage than raw single-date spectral
+# bands would be — that is a within-region effect. Nothing about that
+# aggregation helps a model trained only on Bern's spectral/embedding
+# signature recognize Seville's, which is a genuinely different climate,
+# soil, and crop-calendar signal — an extrapolation problem, not an
+# interpolation one. The Sentinel-2 baseline in the next section tests this
+# hypothesis directly.
+
+# %% tags=["solution"]
+combined = pd.concat([bern_clf, seville_clf], ignore_index=True)
+X_all = course.schema.to_matrix(combined)
+y_all = combined["label"].to_numpy()
+region_groups = combined["region"].to_numpy()
+
+lro_results = {}
+for name, model in MODELS.items():
+    report = spatial_cv_report(
+        model, X_all, y_all, groups=region_groups, cv=LeaveOneGroupOut()
+    )
+    lro_results[name] = report
+    print(
+        f"LEAVE-REGION-OUT ({name}): balanced_accuracy="
+        f"{report['mean_balanced_accuracy']:.3f} ± {report['std_balanced_accuracy']:.3f} "
+        f"(random-split was {trap_results[name]['balanced_accuracy']:.3f}, "
+        f"block CV was {block_results[name]['mean_balanced_accuracy']:.3f})"
+    )
+
+# %% [markdown]
+# **The headline result:** the leave-region-out numbers printed above show
+# a double-digit balanced-accuracy drop relative to the random-split and
+# block-CV numbers from the previous section — a large, robust gap,
+# consistent with a similar sample measured previously on this data
+# (02-RESEARCH.md: 17-19 points for logistic regression and random forest,
+# train Bern → predict Seville). In-region spatial-block CV, by contrast,
+# showed only a 1-4 point gap above. **Leave-region-out is the primary
+# evidence that a random split lies here** — the in-region block-vs-random
+# comparison is a real, smaller, second lesson about interpolation vs.
+# extrapolation, not the dramatic effect.
+
+# %%
+model_names = list(MODELS.keys())
+scenarios = ["random split", "spatial-block CV", "leave-region-out"]
+scores = {
+    name: [
+        trap_results[name]["balanced_accuracy"],
+        block_results[name]["mean_balanced_accuracy"],
+        lro_results[name]["mean_balanced_accuracy"],
+    ]
+    for name in model_names
+}
+
+fig, ax = plt.subplots(figsize=(7, 5))
+bar_width = 0.35
+x = np.arange(len(scenarios))
+for i, name in enumerate(model_names):
+    ax.bar(x + i * bar_width, scores[name], width=bar_width, label=name)
+ax.set_xticks(x + bar_width / 2)
+ax.set_xticklabels(scenarios)
+ax.set_ylabel("balanced accuracy")
+ax.set_ylim(0, 1)
+ax.set_title("Leave-region-out is the dramatic gap; in-region block CV is a smaller one")
+ax.legend()
+fig.tight_layout()
+fig.savefig("figures/02_cv_comparison_bar_chart.png")
+plt.show()
+
+# %%
+rf_model = MODELS["random_forest"]
+lro_cv = LeaveOneGroupOut()
+# LeaveOneGroupOut yields one (train, test) split per unique group; pick the
+# split whose held-out fold is Seville specifically (the headline scenario).
+train_idx, test_idx = next(
+    (tr, te)
+    for tr, te in lro_cv.split(X_all, y_all, groups=region_groups)
+    if (region_groups[te] == "seville").all()
+)
+
+rf_model.fit(X_all[train_idx], y_all[train_idx])
+seville_pred = rf_model.predict(X_all[test_idx])
+seville_true = y_all[test_idx]
+
+report_df = pd.DataFrame(
+    classification_report(seville_true, seville_pred, output_dict=True)
+).T
+print("Per-class precision/recall, leave-region-out (train Bern, predict Seville, random_forest):")
+print(report_df)
+
+# %%
+seville_eval = combined.iloc[test_idx].reset_index(drop=True)
+correct = seville_pred == seville_true
+
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.scatter(
+    seville_eval.loc[correct, "lon"], seville_eval.loc[correct, "lat"],
+    s=8, c="tab:green", label="correct", alpha=0.6,
+)
+ax.scatter(
+    seville_eval.loc[~correct, "lon"], seville_eval.loc[~correct, "lat"],
+    s=8, c="tab:red", label="incorrect", alpha=0.6,
+)
+ax.set_title("Seville errors under leave-region-out (train Bern, random_forest)")
+ax.set_xlabel("lon")
+ax.set_ylabel("lat")
+ax.legend(loc="upper right", fontsize="small")
+fig.tight_layout()
+fig.savefig("figures/02_error_map.png")
+plt.show()
+
+# %% [markdown]
+# **Takeaway:** leave-region-out is where the dramatic, generalization-
+# relevant gap lives for this modality — a model that looks excellent on
+# Bern alone loses a large fraction of its accuracy the moment it has to
+# extrapolate to a different climate and land-cover mix. In-region spatial
+# blocking matters too, and is worth teaching in its own right, just far
+# less dramatically here than the leave-region-out effect above.
