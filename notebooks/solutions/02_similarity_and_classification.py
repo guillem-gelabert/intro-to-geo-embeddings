@@ -382,3 +382,135 @@ plt.show()
 # single-pixel query can win instead. There is no query design that is
 # unconditionally best — that is why this notebook measures rather than
 # assumes.
+
+# %% [markdown]
+# ## Classification: the random-split trap
+#
+# Search-by-example needs no labels. A classifier does — and once labels
+# are in play, *how* you split the data into train/test sets stops being a
+# formality and becomes the single most consequential methodological
+# choice in this notebook.
+#
+# **Class filtering:** both regions carry a `bare` class, but it is a
+# residual, sparse category in each region's WorldCover-derived label
+# balance (219 points in Bern's full candidate pool, per
+# `02-RESEARCH.md`'s "Phase Requirements" table) — too thin to support a
+# stable per-class precision/recall estimate under 5-fold grouped CV. This
+# notebook classifies the four classes with adequate representation in
+# both regions: **built, crop, vegetation, water.** `bare` is dropped, and
+# that filtering is a deliberate, stated decision, not a silent one.
+
+# %% tags=["solution"]
+CLASSES = ["built", "crop", "vegetation", "water"]
+bern_clf = bern.loc[bern["label"].isin(CLASSES)].reset_index(drop=True)
+seville_clf = seville.loc[seville["label"].isin(CLASSES)].reset_index(drop=True)
+print(f"bern: {len(bern_clf)}/{len(bern)} rows kept after dropping 'bare'")
+print(f"seville: {len(seville_clf)}/{len(seville)} rows kept after dropping 'bare'")
+print(bern_clf["label"].value_counts())
+
+# %%
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    balanced_accuracy_score,
+    classification_report,
+)
+from sklearn.model_selection import GroupKFold, LeaveOneGroupOut, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+MODELS = {
+    "logreg": Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),
+        ]
+    ),
+    "random_forest": RandomForestClassifier(
+        n_estimators=200,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    ),
+}
+
+X_bern = course.schema.to_matrix(bern_clf)
+y_bern = bern_clf["label"].to_numpy()
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(
+    X_bern, y_bern, test_size=0.3, random_state=RANDOM_STATE, stratify=y_bern
+)
+
+trap_results = {}
+for name, model in MODELS.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    trap_results[name] = {
+        "accuracy": model.score(X_test, y_test),
+        "balanced_accuracy": balanced_accuracy_score(y_test, y_pred),
+    }
+    print(
+        f"TRAP ACCURACY (random split, {name}): "
+        f"accuracy={trap_results[name]['accuracy']:.3f}, "
+        f"balanced_accuracy={trap_results[name]['balanced_accuracy']:.3f}"
+    )
+
+rf_pred = MODELS["random_forest"].predict(X_test)
+fig, ax = plt.subplots(figsize=(6, 6))
+ConfusionMatrixDisplay.from_predictions(y_test, rf_pred, ax=ax, colorbar=False)
+ax.set_title("Random Forest — random split (the trap): looks great, proves little")
+fig.tight_layout()
+fig.savefig("figures/02_confusion_matrix_random_split.png")
+plt.show()
+
+# %% [markdown]
+# ## Spatial CV: project first, then grid
+#
+# A random split lets adjacent points — potentially metres apart — land on
+# opposite sides of train/test. AlphaEarth embeddings make this worse than
+# raw pixels, not better: a full year of spatial/temporal context is baked
+# into every embedding, so neighbouring points are *more* similar than raw
+# spectra would be (PITFALLS.md Pitfall 2).
+#
+# `make_blocks` refuses a geographic CRS outright (PITFALLS.md Pitfall 3:
+# "blocks computed in degrees are meaningless metre sizes"). So this
+# notebook reprojects Bern to **EPSG:2056** (Swiss LV95, metre-based) as an
+# explicit, visible step *before* gridding — never the other way around.
+
+# %% tags=["solution"]
+from course.config import BLOCK_SIZE_M
+from course.validation import make_blocks, spatial_cv_report
+
+bern_2056 = bern_clf.to_crs("EPSG:2056")
+groups_block = make_blocks(bern_2056, block_size_m=BLOCK_SIZE_M)
+n_blocks = len(np.unique(groups_block))
+assert n_blocks >= 5, (
+    f"only {n_blocks} spatial blocks at block_size_m={BLOCK_SIZE_M} — need at "
+    "least 5 for GroupKFold(n_splits=5); the AOI may have shrunk below the "
+    "DATA-08 floor"
+)
+print(f"bern: {n_blocks} spatial blocks at {BLOCK_SIZE_M} m")
+
+block_results = {}
+for name, model in MODELS.items():
+    report = spatial_cv_report(
+        model,
+        X_bern,
+        y_bern,
+        groups=groups_block,
+        cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
+    )
+    block_results[name] = report
+    print(
+        f"BLOCK CV ({name}): balanced_accuracy="
+        f"{report['mean_balanced_accuracy']:.3f} ± {report['std_balanced_accuracy']:.3f} "
+        f"(random-split was {trap_results[name]['balanced_accuracy']:.3f})"
+    )
+
+# %% [markdown]
+# **Measured so far:** the random-split and spatial-block numbers above sit
+# within a few points of each other, not tens of points apart. That gap is
+# real and worth teaching, but it is not yet the dramatic effect this
+# notebook is building toward — that comes next, from leave-region-out.
