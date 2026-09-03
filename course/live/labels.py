@@ -44,12 +44,19 @@ import math
 
 import numpy as np
 import rasterio
+import requests
 from affine import Affine
+from rasterio.io import MemoryFile
 from rasterio.windows import from_bounds
 
 from course.live import LiveSourceUnavailable
 
 WORLDCOVER_BASE = "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map"
+
+EEA_IMD_BASE = (
+    "https://image.discomap.eea.europa.eu/arcgis/rest/services/GioLandPublic/"
+    "HRL_ImperviousnessDensity_2018/ImageServer"
+)
 
 # ESA WorldCover v200 official legend -> course's 5-class teaching scheme.
 # See module docstring "WorldCover class-code grouping rationale" above.
@@ -122,3 +129,38 @@ def class_to_label(code: int) -> str:
         return WORLDCOVER_CLASS_TO_LABEL[code]
     except KeyError as exc:
         raise KeyError(f"unrecognized WorldCover class code: {code}") from exc
+
+
+def imd_2018_window(
+    bbox_4326: tuple, dst_epsg: int, size: tuple[int, int] = (512, 512)
+) -> tuple[np.ndarray, Affine]:
+    """Read one bounded EEA HRL Imperviousness Density 2018 window for an AOI.
+
+    This is an INDEPENDENT reference value, never a label (see module
+    docstring). Calls the ``exportImage`` ImageServer endpoint once per AOI
+    — never per-point ``identify`` (02-RESEARCH.md Pitfall 4). ``bbox_4326``
+    is ``(min_lon, min_lat, max_lon, max_lat)``; the response is
+    reprojected server-side into ``dst_epsg`` and requested at ``size``
+    (width, height) pixels. Raises ``LiveSourceUnavailable`` if the request
+    fails or the response is not a valid GeoTIFF.
+    """
+    min_lon, min_lat, max_lon, max_lat = bbox_4326
+    params = {
+        "bbox": f"{min_lon},{min_lat},{max_lon},{max_lat}",
+        "bboxSR": 4326,
+        "imageSR": dst_epsg,
+        "size": f"{size[0]},{size[1]}",
+        "format": "tiff",
+        "f": "image",
+    }
+    try:
+        response = requests.get(f"{EEA_IMD_BASE}/exportImage", params=params, timeout=60)
+        response.raise_for_status()
+        with MemoryFile(response.content) as memfile, memfile.open() as ds:
+            arr = ds.read(1)
+            transform = ds.transform
+    except Exception as exc:
+        raise LiveSourceUnavailable(
+            f"failed to fetch HRL Imperviousness 2018 window for bbox {bbox_4326}: {exc}"
+        ) from exc
+    return arr, transform
