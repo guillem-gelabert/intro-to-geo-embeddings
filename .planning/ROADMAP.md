@@ -56,9 +56,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — README (banner, license, notebook table), jupytext/pre-commit/.gitignore hygiene
-- [ ] 01-03-PLAN.md — Makefile (env/kernel/test/execute-notebooks/requirements-colab.txt), fail-fast headless execution test
-- [ ] 01-04-PLAN.md — core/extras isolation test, Setup-cell bootstrap contract test
+- [x] 01-02-PLAN.md — README (banner, license, notebook table), jupytext/pre-commit/.gitignore hygiene
+- [x] 01-03-PLAN.md — Makefile (env/kernel/test/execute-notebooks/requirements-colab.txt), fail-fast headless execution test
+- [x] 01-04-PLAN.md — core/extras isolation test, Setup-cell bootstrap contract test
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -179,7 +179,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Repository and Environment Scaffold | 1/5 | In Progress|  |
+| 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
 | 2. Frozen Two-Region Teaching Datasets | 0/TBD | Not started | - |
 | 3. Similarity Search and Classification Notebook | 0/TBD | Not started | - |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
