@@ -97,8 +97,8 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 02-07-PLAN.md — extract_aef.py and attach_labels.py wiring
-- [ ] 02-08-PLAN.md — attach_s2.py wiring
+- [x] 02-07-PLAN.md — extract_aef.py and attach_labels.py wiring
+- [x] 02-08-PLAN.md — attach_s2.py wiring
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -214,7 +214,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
-| 2. Frozen Two-Region Teaching Datasets | 6/12 | In Progress|  |
+| 2. Frozen Two-Region Teaching Datasets | 8/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 0/TBD | Not started | - |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
