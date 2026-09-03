@@ -1,15 +1,38 @@
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
+from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 
 from course.config import AREAS
+from course.live import LiveSourceUnavailable
 from course.live.labels import (
     WORLDCOVER_CLASS_TO_LABEL,
     class_to_label,
+    imd_2018_window,
     worldcover_tile_name,
 )
 
 OFFICIAL_WORLDCOVER_CODES = {10, 20, 30, 40, 50, 60, 70, 80, 90, 95, 100}
+
+
+def _synthetic_geotiff_bytes(shape=(4, 4), value=50, crs="EPSG:32632"):
+    """Build a tiny in-memory single-band GeoTIFF, for mocking a network response."""
+    arr = np.full(shape, value, dtype=np.uint8)
+    transform = from_origin(600000, 5200000, 20, 20)
+    with MemoryFile() as memfile:
+        with memfile.open(
+            driver="GTiff",
+            height=shape[0],
+            width=shape[1],
+            count=1,
+            dtype=arr.dtype,
+            crs=crs,
+            transform=transform,
+        ) as ds:
+            ds.write(arr, 1)
+        return memfile.read()
 
 
 # --- Task 1: WorldCover tile naming and class mapping (no network) ---
@@ -77,7 +100,47 @@ def test_worldcover_window_calls_rasterio_open_once_per_aoi(monkeypatch):
     assert arr.shape == (2, 2)
 
 
-# --- Network-marked integration test (excluded from the default fast suite) ---
+# --- Task 2: imd_2018_window (mocked request, no network) ---
+
+
+def test_imd_2018_window_builds_correct_request_and_parses_response():
+    tiff_bytes = _synthetic_geotiff_bytes(shape=(4, 4), value=50)
+    mock_response = MagicMock()
+    mock_response.content = tiff_bytes
+    mock_response.raise_for_status = MagicMock()
+
+    with patch(
+        "course.live.labels.requests.get", return_value=mock_response
+    ) as mock_get:
+        arr, transform = imd_2018_window(
+            AREAS["bern"]["bbox_4326"], dst_epsg=32632, size=(4, 4)
+        )
+
+    assert mock_get.call_count == 1
+    _, kwargs = mock_get.call_args
+    assert kwargs["params"]["bboxSR"] == 4326
+    assert kwargs["params"]["imageSR"] == 32632
+    assert kwargs["params"]["format"] == "tiff"
+    assert kwargs["params"]["size"] == "4,4"
+
+    assert arr.shape == (4, 4)
+    assert np.all(arr == 50)
+    assert transform is not None
+
+
+def test_imd_2018_window_raises_live_source_unavailable_on_bad_response():
+    mock_response = MagicMock()
+    mock_response.content = b"not a geotiff"
+    mock_response.raise_for_status = MagicMock()
+
+    with (
+        patch("course.live.labels.requests.get", return_value=mock_response),
+        pytest.raises(LiveSourceUnavailable),
+    ):
+        imd_2018_window(AREAS["bern"]["bbox_4326"], dst_epsg=32632, size=(4, 4))
+
+
+# --- Network-marked integration tests (excluded from the default fast suite) ---
 
 
 @pytest.mark.network
@@ -87,3 +150,14 @@ def test_worldcover_window_live_bern():
     arr, _transform = worldcover_window(AREAS["bern"]["bbox_4326"])
     assert arr.ndim == 2
     assert arr.size > 0
+
+
+@pytest.mark.network
+def test_imd_2018_window_live_bern():
+    bbox = AREAS["bern"]["bbox_4326"]
+    size = (64, 64)
+    arr, _transform = imd_2018_window(bbox, dst_epsg=32632, size=size)
+
+    assert arr.shape == size
+    in_range_or_nodata = ((arr >= 0) & (arr <= 100)) | (arr == 255)
+    assert np.all(in_range_or_nodata)
