@@ -139,7 +139,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03-03-PLAN.md — notebook: classification trap, spatial-block CV, leave-region-out, comparison chart, Sentinel-2 baseline
+- [x] 03-03-PLAN.md — notebook: classification trap, spatial-block CV, leave-region-out, comparison chart, Sentinel-2 baseline
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -232,7 +232,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
-| 3. Similarity Search and Classification Notebook | 2/4 | In Progress|  |
+| 3. Similarity Search and Classification Notebook | 3/4 | In Progress|  |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
