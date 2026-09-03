@@ -1,0 +1,12 @@
+{
+  "embedding_product": "lgnd_clay_v1.5_sentinel2_l2a",
+  "dataset_version": "v1.5",
+  "year": 2025,
+  "extraction_date": "2026-09-03T23:32:03.210016+00:00",
+  "source_path": "https://data.source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a/aggregated/geohash_l2=u0/year=2025/month=06/data_01c1fab1-0004-5b1c-0009-b72e01d3104e_222_0_0.parquet",
+  "sampling_method": "ST_Intersects Bern city center (7.4474, 46.948), first 5 rows",
+  "crs": "EPSG:4326",
+  "license": "CC BY 4.0",
+  "attribution": "LGND Clay v1.5 Sentinel-2 L2A embeddings, Source Cooperative, CC BY 4.0",
+  "created_by": "pipeline/fetch_clay_fixture.py"
+}
