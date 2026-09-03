@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: milestone
 status: executing
 stopped_at: ROADMAP.md and STATE.md written; REQUIREMENTS.md traceability populated
-last_updated: "2026-09-03T15:44:18.106Z"
-last_activity: 2026-09-03 -- Phase 01 execution started
+last_updated: "2026-09-03T17:21:52.610Z"
+last_activity: 2026-09-03 -- Phase 02 execution started
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 5
-  completed_plans: 0
+  total_plans: 17
+  completed_plans: 4
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-03)
 
 **Core value:** A student can take a precomputed geospatial embedding field, run similarity search and a lightweight classifier on it, and evaluate the result with a spatially honest validation — entirely from a notebook, with no Earth Engine account.
-**Current focus:** Phase 01 — repository-and-environment-scaffold
+**Current focus:** Phase 02 — frozen-two-region-teaching-datasets
 
 ## Current Position
 
-Phase: 01 (repository-and-environment-scaffold) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 01
-Last activity: 2026-09-03 -- Phase 01 execution started
+Phase: 02 (frozen-two-region-teaching-datasets) — EXECUTING
+Plan: 1 of 12
+Status: Executing Phase 02
+Last activity: 2026-09-03 -- Phase 02 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
