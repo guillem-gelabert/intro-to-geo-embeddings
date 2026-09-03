@@ -91,8 +91,7 @@ def load(
     actual_sha = hashlib.sha256(resp.content).hexdigest()
     expected_sha = entry["sha256"]
     assert actual_sha == expected_sha, (
-        f"checksum mismatch for {filename}: "
-        f"expected {expected_sha}, got {actual_sha}"
+        f"checksum mismatch for {filename}: expected {expected_sha}, got {actual_sha}"
     )
 
     local.parent.mkdir(parents=True, exist_ok=True)

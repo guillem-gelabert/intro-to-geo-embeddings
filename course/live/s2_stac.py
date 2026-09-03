@@ -204,9 +204,7 @@ def _sample_at_points(href: str, points_lonlat: np.ndarray) -> np.ndarray:
                 points_lonlat[:, 0].tolist(),
                 points_lonlat[:, 1].tolist(),
             )
-            values = np.array(
-                [v[0] for v in ds.sample(zip(xs, ys))], dtype=np.float64
-            )
+            values = np.array([v[0] for v in ds.sample(zip(xs, ys))], dtype=np.float64)
             if ds.nodata is not None:
                 values = np.where(values == ds.nodata, np.nan, values)
     except rasterio.errors.RasterioIOError as exc:
@@ -257,19 +255,14 @@ def sample_bands(
 
             for point_idx in range(n_points):
                 if valid_scl[point_idx] and np.isfinite(reflectance[point_idx]):
-                    band_readings[band][point_idx].append(
-                        float(reflectance[point_idx])
-                    )
+                    band_readings[band][point_idx].append(float(reflectance[point_idx]))
                     scene_contributed[scene_idx, point_idx] = True
 
     data = {}
     for band in bands:
         col = f"S2_{band}"
         data[col] = np.array(
-            [
-                np.median(values) if values else np.nan
-                for values in band_readings[band]
-            ],
+            [np.median(values) if values else np.nan for values in band_readings[band]],
             dtype=np.float32,
         )
     data["s2_n_scenes"] = scene_contributed.sum(axis=0)

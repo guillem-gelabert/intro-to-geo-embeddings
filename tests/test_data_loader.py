@@ -128,7 +128,9 @@ def test_checksum_mismatch_raises_and_leaves_no_partial_file(tmp_path, monkeypat
     mock_get = MagicMock(return_value=mock_resp)
     monkeypatch.setattr(data_module.requests, "get", mock_get)
 
-    with pytest.raises(AssertionError, match=f"{wrong_sha}.*{actual_sha}|{actual_sha}.*{wrong_sha}"):
+    with pytest.raises(
+        AssertionError, match=f"{wrong_sha}.*{actual_sha}|{actual_sha}.*{wrong_sha}"
+    ):
         data_module.load(area, year, data_dir=tmp_path)
 
     local = tmp_path / area / filename

@@ -103,11 +103,7 @@ def worldcover_window(bbox_4326: tuple) -> tuple[np.ndarray, Affine]:
     url = f"{WORLDCOVER_BASE}/ESA_WorldCover_10m_2021_v200_{tile}_Map.tif"
     try:
         with rasterio.open(f"/vsicurl/{url}") as ds:
-            win = (
-                from_bounds(*bbox_4326, ds.transform)
-                .round_offsets()
-                .round_lengths()
-            )
+            win = from_bounds(*bbox_4326, ds.transform).round_offsets().round_lengths()
             arr = ds.read(1, window=win)
             transform = ds.window_transform(win)
     except Exception as exc:
@@ -154,7 +150,9 @@ def imd_2018_window(
         "f": "image",
     }
     try:
-        response = requests.get(f"{EEA_IMD_BASE}/exportImage", params=params, timeout=60)
+        response = requests.get(
+            f"{EEA_IMD_BASE}/exportImage", params=params, timeout=60
+        )
         response.raise_for_status()
         with MemoryFile(response.content) as memfile, memfile.open() as ds:
             arr = ds.read(1)
