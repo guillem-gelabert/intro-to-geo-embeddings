@@ -32,7 +32,7 @@ import yaml
 from rasterio.transform import xy
 from shapely.geometry import Point
 
-from course.config import AREAS
+from course.config import AREAS, BLOCK_SIZE_M
 from course.live.labels import class_to_label, worldcover_window
 
 AREAS_YAML_PATH = Path(__file__).parent / "areas.yaml"
@@ -106,13 +106,26 @@ def _stratified_indices(labels: np.ndarray, class_caps: dict, seed: int) -> np.n
     return np.concatenate(selected)
 
 
+def _block_id(x: np.ndarray, y: np.ndarray, block_size_m: float) -> np.ndarray:
+    """Assign a deterministic block id per ``block_size_m`` grid cell.
+
+    ``x``/``y`` must already be in a projected (meters) CRS -- computing
+    this in degrees would distort cell size with latitude
+    (02-RESEARCH.md "Sampling and Block Design" -> "Block size"; PITFALLS.md
+    Pitfall 3, "Building spatial blocks wrongly").
+    """
+    cell_x = np.floor(np.asarray(x) / block_size_m).astype(np.int64)
+    cell_y = np.floor(np.asarray(y) / block_size_m).astype(np.int64)
+    return np.array([f"{cx}_{cy}" for cx, cy in zip(cell_x, cell_y)], dtype=object)
+
+
 def generate_sample_points(area: str) -> gpd.GeoDataFrame:
     """Draw the fixed, stratified sample point set for one region.
 
     Returns a GeoDataFrame (``crs="EPSG:4326"``) with columns ``sample_id``,
-    ``region``, ``lon``, ``lat``, ``worldcover_class``, ``geometry`` -- the
-    fixed point set every later per-year extraction step (Plan 02-07, 02-08)
-    indexes into.
+    ``region``, ``lon``, ``lat``, ``x``, ``y``, ``block_id``,
+    ``worldcover_class``, ``geometry`` -- the fixed point set every later
+    per-year extraction step (Plan 02-07, 02-08) indexes into.
     """
     pipeline_areas = _load_pipeline_areas()
     if area not in pipeline_areas:
@@ -124,6 +137,7 @@ def generate_sample_points(area: str) -> gpd.GeoDataFrame:
 
     params = pipeline_areas[area]
     bbox_4326 = AREAS[area]["bbox_4326"]
+    epsg = AREAS[area]["epsg"]
 
     arr, transform = worldcover_window(bbox_4326)
 
@@ -158,4 +172,14 @@ def generate_sample_points(area: str) -> gpd.GeoDataFrame:
         geometry=geometry,
         crs="EPSG:4326",
     )
+
+    # Reproject a copy to the region's own projected UTM CRS to derive x/y
+    # and block_id -- the returned GeoDataFrame's own geometry/CRS stays at
+    # EPSG:4326 (course.schema.validate's CRS==4326 requirement); x/y are
+    # plain float columns, not a second geometry.
+    projected = gdf.geometry.to_crs(epsg=epsg)
+    gdf["x"] = projected.x.to_numpy()
+    gdf["y"] = projected.y.to_numpy()
+    gdf["block_id"] = _block_id(gdf["x"].to_numpy(), gdf["y"].to_numpy(), BLOCK_SIZE_M)
+
     return gdf
