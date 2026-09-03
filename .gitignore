@@ -1,6 +1,8 @@
-# GSD planning docs are tracked. The author's global gitignore has a
-# `*requirements.md` rule; re-include the GSD requirements file explicitly.
+# GSD planning docs are tracked. The author's global gitignore has
+# `*requirements.md` and `*plan.md` rules; re-include the GSD planning
+# files those rules would otherwise silently exclude.
 !.planning/REQUIREMENTS.md
+!.planning/**/*-PLAN.md
 
 # Python / notebooks
 .venv/

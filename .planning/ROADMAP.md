@@ -42,7 +42,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `import course` works from the synced environment while earthengine-api, geemap, geotessera, duckdb and torch/Clay stay out of the core install as optional extras or a separate uv project.
   4. Author runs one make/task target that executes every solution notebook headlessly against the frozen data and exits non-zero on the first cell error.
   5. The README lists every notebook with an Open-in-Colab badge, local run instructions, every data source with its license, and the banner "Course reference environment: 2026-08 release. Provider APIs may change. Every cloud notebook has a local/offline fallback."
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — pyproject.toml, uv-managed environment, project kernel, `course` package, schema contract, shared pytest fixtures
+- [ ] 01-02-PLAN.md — README (banner, license, notebook table), jupytext/pre-commit/.gitignore hygiene
+- [ ] 01-03-PLAN.md — Makefile (env/kernel/test/execute-notebooks/requirements-colab.txt), fail-fast headless execution test
+- [ ] 01-04-PLAN.md — core/extras isolation test, Setup-cell bootstrap contract test
+- [ ] 01-05-PLAN.md — manual Colab bootstrap timing checkpoint
+
 
 ### Phase 2: Frozen Two-Region Teaching Datasets
 **Goal**: Every notebook in the course can load a labelled, multi-year, two-region embedding table from disk with a public remote fallback, carrying its own provenance and license — with no credentials of any kind.
