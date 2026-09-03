@@ -126,7 +126,24 @@ Plans:
   4. Student encounters the "similarity > 0.90 means same land cover" WRONG-conclusion cell with its ranking-and-precision@k correction, and every experiment ends with a Takeaway whose claim is visible in the output directly above it, closing with Wrap-up, What's next, Resources and a non-executed Path A Earth Engine appendix.
   5. The identical pipeline and CV run on Sentinel-2 raw bands with a comparison table, the notebook writes `outputs/provenance.json` and `figures/02_*.png`, and the helpers it uses (`cosine_similarity_map`, `make_blocks`, `spatial_cv_report`, provenance builder) are imported from the `course` package with green unit tests rather than defined inline.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — course helpers: cosine_similarity_map, make_blocks, spatial_cv_report, provenance builder, all unit-tested
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — notebook: Header, Setup, Data, Similarity 1/2/3 (search-by-example, WRONG-conclusion trap, prototype ladder + precision@k)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-03-PLAN.md — notebook: classification trap, spatial-block CV, leave-region-out, comparison chart, Sentinel-2 baseline
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03-04-PLAN.md — notebook: provenance cell, Wrap-up/Resources/Path A appendix, full-notebook timing/cell-budget verification, Colab checkpoint
 
 ### Phase 4: Earlier Module Solution Notebooks
 
@@ -215,7 +232,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
-| 3. Similarity Search and Classification Notebook | 0/TBD | Not started | - |
+| 3. Similarity Search and Classification Notebook | 0/4 | Not started | - |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
