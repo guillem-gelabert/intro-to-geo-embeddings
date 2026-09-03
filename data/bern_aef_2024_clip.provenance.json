@@ -1,0 +1,23 @@
+{
+  "embedding_product": "alphaearth_satellite_embedding",
+  "dataset_version": "1.1",
+  "year": 2024,
+  "extraction_date": "2026-09-03T23:31:57.967403+00:00",
+  "source_path": "https://storage.googleapis.com/alphaearth_foundations/satellite_embedding/v1/annual/2024/32N/xlhcaokskggk40mla-0000008192-0000000000.tiff",
+  "sampling_method": "single windowed COG read via course.live.aef_cog.read_window, no point sampling, raw int8 not dequantized",
+  "crs": "EPSG:32632",
+  "bbox_4326": [
+    7.44,
+    46.94,
+    7.46,
+    46.96
+  ],
+  "shape": [
+    64,
+    225,
+    157
+  ],
+  "license": "CC BY 4.0",
+  "attribution": "The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.",
+  "created_by": "pipeline/extract_clip_raster.py"
+}
