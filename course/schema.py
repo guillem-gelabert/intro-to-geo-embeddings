@@ -26,3 +26,13 @@ def validate(gdf, embedding_prefix: str = "A"):
 
 def to_matrix(gdf, embedding_prefix: str = "A") -> np.ndarray:
     return gdf[embedding_cols(gdf, embedding_prefix)].to_numpy(np.float32)
+
+
+FROZEN_REQUIRED = REQUIRED + ["region", "block_id", "x", "y"] + S2_COLS
+
+
+def validate_frozen(gdf, embedding_prefix: str = "A"):
+    validate(gdf, embedding_prefix)
+    missing = [c for c in FROZEN_REQUIRED if c not in gdf]
+    assert not missing, f"missing frozen-table columns: {missing}"
+    return gdf
