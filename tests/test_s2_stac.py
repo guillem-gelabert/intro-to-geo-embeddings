@@ -1,8 +1,15 @@
+import numpy as np
 import pytest
 import requests
 
 from course.live import LiveSourceUnavailable
-from course.live.s2_stac import STAC_SEARCH_URL, search_scenes, select_scenes
+from course.live.s2_stac import (
+    STAC_SEARCH_URL,
+    _apply_scale,
+    _assert_plausible_reflectance,
+    search_scenes,
+    select_scenes,
+)
 
 
 def _make_item(item_id, dt, cloud_cover):
@@ -119,10 +126,6 @@ def test_search_scenes_posts_valid_rfc3339_datetime_range(monkeypatch):
 
 
 def test_apply_scale_multiplies_dn_by_scale_no_offset_subtraction():
-    import numpy as np
-
-    from course.live.s2_stac import _apply_scale
-
     dn = np.array([1000.0, 1500.0, 2000.0], dtype=np.float64)
     scale = 0.0001
 
@@ -132,10 +135,6 @@ def test_apply_scale_multiplies_dn_by_scale_no_offset_subtraction():
 
 
 def test_plausibility_assertion_fires_on_implausible_mean():
-    import numpy as np
-
-    from course.live.s2_stac import _assert_plausible_reflectance
-
     implausible = np.full((5, 6), -0.3, dtype=np.float64)
 
     with pytest.raises(AssertionError):
@@ -143,10 +142,6 @@ def test_plausibility_assertion_fires_on_implausible_mean():
 
 
 def test_plausibility_assertion_passes_on_plausible_mean():
-    import numpy as np
-
-    from course.live.s2_stac import _assert_plausible_reflectance
-
     plausible = np.full((5, 6), 0.15, dtype=np.float64)
 
     _assert_plausible_reflectance(plausible)  # must not raise
@@ -157,8 +152,6 @@ def test_plausibility_assertion_passes_on_plausible_mean():
 
 @pytest.mark.network
 def test_sample_bands_end_to_end_bern_2021():
-    import numpy as np
-
     from course.live.s2_stac import sample_bands
     from course.schema import S2_COLS
 
