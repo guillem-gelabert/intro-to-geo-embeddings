@@ -129,3 +129,7 @@ None - no external service configuration required.
 ---
 *Phase: 02-frozen-two-region-teaching-datasets*
 *Completed: 2026-09-03*
+
+## Self-Check: PASSED
+
+All 11 claimed files found on disk; all 6 commit hashes (48f3408, 3621595, 8d68a68, e83d139, 9944b4a, 9c3f53d) found in git log.
