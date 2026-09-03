@@ -82,7 +82,9 @@ if IN_COLAB:
     missing = [pip for mod, pip in REQUIRED.items() if importlib.util.find_spec(mod) is None]
     if missing:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", *missing])
-else:
+
+# %%
+if not IN_COLAB:
     # `jupyter execute` (nbclient's CLI) sets the kernel's cwd to the
     # notebook's own directory (notebooks/solutions/), not the repo root,
     # so a bare `Path("data")`/`Path("figures")` would resolve to the wrong
@@ -759,3 +761,86 @@ print(
 # the honest number is the lesson, not a story picked in advance. Either
 # way, the leave-region-out gap — for both feature representations —
 # remains the larger, more consequential effect in this notebook.
+
+# %% [markdown]
+# ## Provenance
+#
+# Every number and figure above traces back to a specific dataset version,
+# CRS, label source and license -- recorded once per table when it was
+# loaded (`course.data.load`) and summarized here with `build_provenance`
+# / `write_provenance` (`course/provenance.py`), never hand-typed. This is
+# the single source of truth for "what exactly did this run use."
+
+# %% tags=["solution"]
+import json
+
+from course.provenance import build_provenance, write_provenance
+
+provenance = build_provenance(
+    {"bern_2021": bern, "seville_2021": seville},
+    created_by="Introduction to Geospatial Embeddings, Module 3 notebook",
+)
+write_provenance(provenance, Path("outputs/provenance.json"))
+print(json.dumps(provenance, indent=2))
+
+# %% [markdown]
+# ## Wrap-up
+#
+# **Takeaways:**
+#
+# - Cosine similarity search over AlphaEarth's 64-D embedding finds
+#   visually and semantically similar locations without any training loop.
+# - Prototype queries (polygon-mean and positive-minus-negative centroid)
+#   let you define a class by example rather than by hand-picking a
+#   threshold.
+# - A classifier trained and evaluated with a random split reports an
+#   accuracy that a spatial-block or leave-region-out split shows is
+#   optimistic -- the gap is small in-region here but large across regions.
+# - The honest, leave-region-out estimate is the number that predicts how
+#   the classifier will actually perform somewhere it has not seen.
+# - Swapping AlphaEarth embeddings for raw Sentinel-2 bands, with every
+#   other step held identical, isolates representation as the only
+#   variable that changed.
+
+# %% [markdown]
+# ## What's next
+#
+# Module 4 (`01_alphaearth_access_visualize.ipynb`) and later modules
+# import these SAME `course` helpers -- `cosine_similarity_map`,
+# `make_blocks`, `spatial_cv_report` -- rather than redefining them, so the
+# similarity and validation logic you just used stays identical across the
+# whole course.
+
+# %% [markdown]
+# ## Resources
+#
+# - AlphaEarth GCS README: https://developers.google.com/earth-engine/guides/aef_on_gcs_readme
+# - AlphaEarth Earth Engine catalog entry: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL
+# - Course reference environment: `course.config.COURSE_RELEASE` = `"2026.08"`
+# - License: CC BY 4.0
+# - Attribution: "The AlphaEarth Foundations Satellite Embedding dataset is
+#   produced by Google and Google DeepMind." (same string recorded in the
+#   `provenance` cell above and in `data/DATA_CARD.md` -- reused verbatim,
+#   never retyped)
+
+# %% [markdown]
+# ## Appendix: Path A (Earth Engine) -- illustrative only, not executed
+#
+# Everything above used the frozen, no-credentials Path B tables. If you
+# have an Earth Engine account and Cloud project, the same AlphaEarth
+# vectors can be sampled live instead -- illustrative only; not executed;
+# see Module 4 for the real Path A/A' notebook with a working auth cell
+# and fallback.
+
+# %% tags=["skip-execution"]
+# import ee
+#
+# ee.Initialize(project="your-gcp-project-id")  # placeholder -- never a real id
+#
+# collection = ee.ImageCollection("GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL")
+# image = collection.filterDate("2021-01-01", "2022-01-01").first()
+# points = ee.FeatureCollection(
+#     [ee.Feature(ee.Geometry.Point(lon, lat)) for lon, lat in [(7.45, 46.95)]]
+# )
+# sampled = image.sampleRegions(collection=points, scale=10)
+# print(sampled.getInfo())
