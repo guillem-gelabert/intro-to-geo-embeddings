@@ -205,4 +205,6 @@ def write_manifest(entries: list[dict], out_path: Path) -> None:
 
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(manifest, indent=2))
+    # Trailing newline so the file matches what the end-of-file-fixer
+    # pre-commit hook expects; without it every build dirties the manifest.
+    out_path.write_text(json.dumps(manifest, indent=2) + "\n")
