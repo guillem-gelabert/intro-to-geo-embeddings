@@ -121,3 +121,7 @@ None - no external service configuration required. The network-marked tests requ
 ---
 *Phase: 02-frozen-two-region-teaching-datasets*
 *Completed: 2026-09-03*
+
+## Self-Check: PASSED
+
+All created files verified present on disk (`pipeline/extract_aef.py`, `pipeline/attach_labels.py`, `tests/test_extract_aef.py`, `tests/test_attach_labels.py`, this SUMMARY.md). All 5 commit hashes verified present in git log (`d50bde1`, `5088d0d`, `0e18c15`, `28acdd4`, `6dcca89`).
