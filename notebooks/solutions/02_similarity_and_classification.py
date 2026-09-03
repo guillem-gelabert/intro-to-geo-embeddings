@@ -161,3 +161,87 @@ print("Both regions confirmed: 64 embedding dimensions, unit norm.")
 # for both regions. That is a property of *this* data, not something the
 # similarity helper assumes (it always divides by the real norms, so it
 # stays correct for embeddings that are not unit-norm too).
+
+# %% [markdown]
+# ## Similarity 1: Search by example
+#
+# Pick a single point ("the query") and rank every other point in the same
+# region by cosine similarity to it. This is the simplest possible use of
+# an embedding: no training, no labels required at query time — just "find
+# me more of this."
+
+# %% tags=["parameters"]
+QUERY_REGION = "bern"  # EDIT ME
+QUERY_ID = 150  # EDIT ME -- a "built" point in bern
+K = 10  # EDIT ME
+
+# %%
+gdf = bern if QUERY_REGION == "bern" else seville
+assert QUERY_ID in gdf.index, (
+    f"QUERY_ID={QUERY_ID!r} is out of range for region {QUERY_REGION!r} "
+    f"(valid range: 0..{gdf.index.max()})"
+)
+matrix = course.schema.to_matrix(gdf)
+query_vec = matrix[QUERY_ID]
+sims = cosine_similarity_map(query_vec, matrix)
+
+order = np.argsort(-sims)
+order = order[order != QUERY_ID][:K]
+ranked = pd.DataFrame(
+    {
+        "rank": np.arange(1, K + 1),
+        "sample_id": gdf.iloc[order]["sample_id"].to_numpy(),
+        "label": gdf.iloc[order]["label"].to_numpy(),
+        "similarity": sims[order],
+    }
+)
+print(f"query: sample_id={gdf.loc[QUERY_ID, 'sample_id']}, label={gdf.loc[QUERY_ID, 'label']!r}")
+print(ranked)
+
+# %%
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.scatter(gdf["lon"], gdf["lat"], s=6, c="lightgray", label="all points")
+top_k_rows = gdf.iloc[order]
+ax.scatter(top_k_rows["lon"], top_k_rows["lat"], s=30, c="tab:orange", label=f"top-{K} matches")
+ax.scatter(
+    gdf.loc[QUERY_ID, "lon"], gdf.loc[QUERY_ID, "lat"],
+    s=200, marker="*", c="tab:red", edgecolors="black", label="query",
+)
+ax.set_title(f"{QUERY_REGION}: top-{K} matches for query {QUERY_ID}")
+ax.legend(loc="upper right", fontsize="small")
+fig.tight_layout()
+fig.savefig("figures/02_topk_matches_map.png")
+plt.show()
+
+# %%
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.hist(sims, bins=50)
+ax.axvline(0.90, color="red", linestyle="--", label="similarity = 0.90")
+ax.set_xlabel("cosine similarity to query")
+ax.set_ylabel("count")
+ax.set_title(f"{QUERY_REGION}: similarity of every point to the query")
+ax.legend()
+fig.tight_layout()
+fig.savefig("figures/02_similarity_histogram.png")
+plt.show()
+
+# %% tags=["wrong-conclusion"]
+# WRONG CONCLUSION: "similarity > 0.90 means same land cover"
+same_class_rate = (gdf.loc[sims > 0.90, "label"] == gdf.loc[QUERY_ID, "label"]).mean()
+print(
+    f"WRONG: {same_class_rate:.0%} of points with similarity > 0.90 share the "
+    f"query's label ({gdf.loc[QUERY_ID, 'label']!r}), so a similarity above 0.90 "
+    "must mean 'same land cover'."
+)
+
+# %% [markdown]
+# ### Why this is wrong
+#
+# The 0.90 cutoff is arbitrary — nothing about the embedding's geometry
+# singles out 0.90 as a meaningful boundary. Pick 0.85 or 0.95 instead and
+# the apparent "agreement rate" above changes with it, even though nothing
+# about the underlying data changed. A fixed threshold answers "how many
+# points cross an arbitrary line," not "how good is this query." Ranking,
+# plus **precision@k** (introduced next), is the honest alternative: it
+# asks how good the top-K matches are, which is exactly the question a
+# search-by-example workflow actually needs answered.
