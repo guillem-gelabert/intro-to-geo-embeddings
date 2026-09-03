@@ -1,0 +1,3 @@
+RANDOM_STATE = 42
+COURSE_RELEASE = "2026.08"
+KERNEL_NAME = "geo-embeddings-course"

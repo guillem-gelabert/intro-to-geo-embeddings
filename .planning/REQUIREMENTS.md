@@ -11,11 +11,11 @@ Requirements for the first complete course release. Each maps to roadmap phases.
 
 ### Environment & Repository
 
-- [ ] **ENV-01**: Author can run `uv sync` on the repo and get a working JupyterLab kernel on Python 3.12 (`requires-python >=3.12,<3.14`) with the pinned core stack (numpy, pandas, pyarrow, geopandas, shapely, pyproj, scikit-learn, matplotlib, rasterio, xarray) and a committed `uv.lock`
+- [x] **ENV-01**: Author can run `uv sync` on the repo and get a working JupyterLab kernel on Python 3.12 (`requires-python >=3.12,<3.14`) with the pinned core stack (numpy, pandas, pyarrow, geopandas, shapely, pyproj, scikit-learn, matplotlib, rasterio, xarray) and a committed `uv.lock`
 - [ ] **ENV-02**: Every notebook opens with one Setup cell that detects Colab, pip-installs pinned dependencies only on Colab, imports everything, and sets `RANDOM_STATE` and dataset-version constants
 - [ ] **ENV-03**: Repo README lists every notebook with an "Open in Colab" badge, local run instructions, all data sources with licenses, and the banner "Course reference environment: 2026-08 release. Provider APIs may change. Every cloud notebook has a local/offline fallback."
 - [ ] **ENV-04**: Author can run one make/task target that executes every solution notebook headlessly against the frozen data and fails on any cell error
-- [ ] **ENV-05**: Heavy or credentialed dependencies (earthengine-api, geemap, geotessera, duckdb, torch/Clay) are optional extras or a separate uv project so the core environment stays light and Colab-installable in under two minutes
+- [x] **ENV-05**: Heavy or credentialed dependencies (earthengine-api, geemap, geotessera, duckdb, torch/Clay) are optional extras or a separate uv project so the core environment stays light and Colab-installable in under two minutes
 
 ### Frozen Teaching Datasets
 
@@ -138,11 +138,11 @@ Which phases cover which requirements. Populated by the roadmapper during roadma
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENV-01 | Phase 1 | Pending |
+| ENV-01 | Phase 1 | Complete |
 | ENV-02 | Phase 1 | Pending |
 | ENV-03 | Phase 1 | Pending |
 | ENV-04 | Phase 1 | Pending |
-| ENV-05 | Phase 1 | Pending |
+| ENV-05 | Phase 1 | Complete |
 | DATA-01 | Phase 2 | Pending |
 | DATA-02 | Phase 2 | Pending |
 | DATA-03 | Phase 2 | Pending |

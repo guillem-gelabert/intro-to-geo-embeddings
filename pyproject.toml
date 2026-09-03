@@ -1,0 +1,63 @@
+[project]
+name = "geo-embeddings-course"
+version = "2026.8.0"
+description = "Introduction to Geospatial Embeddings course reference environment"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "folium>=0.20.0",
+    "geopandas>=1.1.4",
+    "mapclassify>=2.11.0",
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.2",
+    "pandas>=3.0.5",
+    "pyarrow>=25.0.1",
+    "pyproj>=3.7.2",
+    "rasterio>=1.5.1",
+    "scikit-learn>=1.9.0",
+    "shapely>=2.1.2",
+    "xarray>=2026.7.0",
+]
+
+[project.optional-dependencies]
+ee = [
+    "earthengine-api>=1.7.42",
+    "geemap>=0.38.4",
+]
+providers = [
+    "duckdb>=1.5.5",
+    "fsspec>=2026.7.0",
+    "gcsfs>=2026.8.0",
+    "geotessera>=0.10.1",
+    "odc-stac>=0.5.3",
+    "pystac-client>=0.9.0",
+    "pytz>=2026.3.post1",
+    "requests>=2.34.2",
+    "rioxarray>=0.23.0",
+    "s3fs>=2026.7.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = "course"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "ipywidgets>=8.1.9",
+    "jupyterlab>=4.6.3",
+    "jupytext>=1.19.5",
+    "nbclient>=0.11.0,<0.12",
+    "nbformat>=5.11.1",
+    "nbstripout>=0.9.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "ruff>=0.16.5",
+]
