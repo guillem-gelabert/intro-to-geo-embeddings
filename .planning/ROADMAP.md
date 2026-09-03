@@ -163,9 +163,9 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — 00_embedding_refresher.ipynb (NumPy/cosine/PCA/classifier/CRS, toy data, no network)
-- [ ] 04-02-PLAN.md — Clay (LGND) fixture data prep: pipeline/fetch_clay_fixture.py, checked-in fixture + provenance
-- [ ] 04-03-PLAN.md — clipped AlphaEarth raster data prep: pipeline/extract_clip_raster.py, checked-in COG + provenance
+- [x] 04-01-PLAN.md — 00_embedding_refresher.ipynb (NumPy/cosine/PCA/classifier/CRS, toy data, no network)
+- [x] 04-02-PLAN.md — Clay (LGND) fixture data prep: pipeline/fetch_clay_fixture.py, checked-in fixture + provenance
+- [x] 04-03-PLAN.md — clipped AlphaEarth raster data prep: pipeline/extract_clip_raster.py, checked-in COG + provenance
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -275,7 +275,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
-| 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
+| 4. Earlier Module Solution Notebooks | 3/7 | In Progress|  |
 | 5. Later Module Solution Notebooks | 0/9 | In Progress| - |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
 | 7. Slide Decks | 0/TBD | Not started | - |
