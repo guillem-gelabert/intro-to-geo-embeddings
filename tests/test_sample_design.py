@@ -10,9 +10,9 @@ import pytest
 import yaml
 from rasterio.transform import from_bounds
 
-from course.config import AREAS
+from course.config import AREAS, BLOCK_SIZE_M
 from pipeline import sample_design
-from pipeline.sample_design import AREAS_YAML_PATH, generate_sample_points
+from pipeline.sample_design import AREAS_YAML_PATH, _block_id, generate_sample_points
 
 # --- Task 1: areas.yaml ---
 
@@ -159,3 +159,79 @@ def test_generate_sample_points_crs_is_4326(patch_worldcover_window):
 def test_generate_sample_points_unknown_area_raises():
     with pytest.raises(KeyError):
         generate_sample_points("nowhere")
+
+
+# --- Task 2: _block_id (pure function, direct unit tests) ---
+
+
+def test_block_id_same_within_cell_different_across_cells():
+    # Two points within the same 1.5 km cell (block_size_m=1500): both in
+    # cell (0, 0) since 0 <= x,y < 1500.
+    x = np.array([100.0, 1400.0, 3200.0])
+    y = np.array([100.0, 1100.0, 1000.0])
+    ids = _block_id(x, y, block_size_m=1500)
+
+    assert ids[0] == ids[1]  # same 1.5 km cell
+    assert ids[2] != ids[0]  # one cell over on x
+
+
+def test_block_id_uses_course_config_block_size_m():
+    assert BLOCK_SIZE_M == 1500
+
+
+# --- Task 2: x/y projection + block_id wired into generate_sample_points ---
+
+
+def test_generate_sample_points_block_count_well_above_five(patch_worldcover_window):
+    """Synthetic sample spans Bern's full ~23x23 km AOI -- block_id count
+    must clear DATA-08's >=5-blocks-per-region floor with enormous margin,
+    matching 02-RESEARCH.md's measured 150-509 groups at this AOI scale."""
+    patch_worldcover_window("bern", shape=(600, 600))
+    gdf = generate_sample_points("bern")
+
+    n_blocks = gdf["block_id"].nunique()
+    assert n_blocks > 5
+    assert n_blocks > 50  # well into the research's measured range
+
+
+def test_generate_sample_points_xy_in_utm_range_not_degrees(patch_worldcover_window):
+    """x/y must be in the region's projected UTM CRS (EPSG:32632 for Bern),
+    not still in EPSG:4326 degrees -- a cheap sanity check that the
+    reprojection actually happened (PITFALLS.md Pitfall 3 analogue)."""
+    patch_worldcover_window("bern")
+    gdf = generate_sample_points("bern")
+
+    from pyproj import Transformer
+
+    min_lon, min_lat, max_lon, max_lat = AREAS["bern"]["bbox_4326"]
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:32632", always_xy=True)
+    corners_x, corners_y = zip(
+        *[
+            transformer.transform(lon, lat)
+            for lon in (min_lon, max_lon)
+            for lat in (min_lat, max_lat)
+        ]
+    )
+    margin = 1000  # meters, generous
+    x_lo, x_hi = min(corners_x) - margin, max(corners_x) + margin
+    y_lo, y_hi = min(corners_y) - margin, max(corners_y) + margin
+
+    assert (gdf["x"] >= x_lo).all() and (gdf["x"] <= x_hi).all()
+    assert (gdf["y"] >= y_lo).all() and (gdf["y"] <= y_hi).all()
+    # Not still in degree magnitude.
+    assert (gdf["x"] > 1000).all()
+    assert (gdf["y"] > 1000).all()
+
+    # The returned GeoDataFrame's own geometry/CRS stays EPSG:4326 --
+    # x/y are plain float columns, not a second geometry.
+    assert gdf.crs.to_epsg() == 4326
+
+
+def test_generate_sample_points_block_id_matches_direct_computation(
+    patch_worldcover_window,
+):
+    patch_worldcover_window("bern")
+    gdf = generate_sample_points("bern")
+
+    expected = _block_id(gdf["x"].to_numpy(), gdf["y"].to_numpy(), BLOCK_SIZE_M)
+    assert list(gdf["block_id"]) == list(expected)
