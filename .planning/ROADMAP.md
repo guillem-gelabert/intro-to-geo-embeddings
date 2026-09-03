@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Repository and Environment Scaffold** - Pinned Python 3.12 env, `course` package contract, headless runner, README banner
 - [ ] **Phase 2: Frozen Two-Region Teaching Datasets** - Credential-free multi-year labelled embedding tables with provenance, card and integrity tests
-- [ ] **Phase 3: Similarity Search and Classification Notebook** - The flagship solution notebook and the reusable helpers every later module imports
+- [x] **Phase 3: Similarity Search and Classification Notebook** - The flagship solution notebook and the reusable helpers every later module imports (completed 2026-09-03)
 - [ ] **Phase 4: Earlier Module Solution Notebooks** - Refresher, representation foundations, AlphaEarth access and visualization with its live/offline tiers
 - [ ] **Phase 5: Later Module Solution Notebooks** - Change detection and validation, embedding ecosystems, capstone, provenance checklist
 - [ ] **Phase 6: Exercise Notebooks and Assessments** - Generated exercises with checkpoints, plus quizzes, assignments and the capstone rubric
@@ -143,7 +143,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 03-04-PLAN.md — notebook: provenance cell, Wrap-up/Resources/Path A appendix, full-notebook timing/cell-budget verification, Colab checkpoint
+- [x] 03-04-PLAN.md — notebook: provenance cell, Wrap-up/Resources/Path A appendix, full-notebook timing/cell-budget verification, Colab checkpoint
 
 ### Phase 4: Earlier Module Solution Notebooks
 
@@ -232,7 +232,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
-| 3. Similarity Search and Classification Notebook | 3/4 | In Progress|  |
+| 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
