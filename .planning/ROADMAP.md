@@ -77,7 +77,41 @@ Plans:
   4. Each table ships a provenance JSON (product, version, year, extraction date, source path, sampling method, CRS, label source, validation source, license, exact attribution sentence, creator, sha256) and the bundle ships a dataset card with per-source licenses and the exact AlphaEarth attribution; no source lacking redistribution rights is bundled.
   5. A fresh Colab runtime with no local data fetches every table and the candidate query-polygon GeoJSON from a pinned public release, verifies checksums, and finds each table around 1 MB or less with the whole bundle under 100 MB.
 
-**Plans**: TBD
+**Plans**: 12 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — dequantize_aef helper, frozen-table schema extension, study-area/version registry, network pytest marker
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — AlphaEarth COG adapter: tile lookup, windowed read, array-index point sampling
+- [ ] 02-03-PLAN.md — WorldCover label adapter and independent HRL Imperviousness 2018 reference
+- [ ] 02-04-PLAN.md — Sentinel-2 STAC adapter: scene search, dedup, SCL-masked band sampling
+- [ ] 02-05-PLAN.md — course.data local-first loader with checksum-verified remote fallback
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-06-PLAN.md — stratified sample design: WorldCover-based strata, min-spacing, block_id, stable sample_id
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-07-PLAN.md — extract_aef.py and attach_labels.py wiring
+- [ ] 02-08-PLAN.md — attach_s2.py wiring
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 02-09-PLAN.md — write.py (GeoParquet + provenance + manifest), data_card.py, build.py CLI, network regen test
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 02-10-PLAN.md — run the real pipeline for both regions/all years, DATA-10 query polygons, human checkpoint
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 02-11-PLAN.md — publish decision (checkpoint) and GitHub Release hosting
+- [ ] 02-12-PLAN.md — final integrity, provenance, licensing and dataset-aliveness test suite
 
 ### Phase 3: Similarity Search and Classification Notebook
 
@@ -180,7 +214,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
-| 2. Frozen Two-Region Teaching Datasets | 0/TBD | Not started | - |
+| 2. Frozen Two-Region Teaching Datasets | 0/12 | Not started | - |
 | 3. Similarity Search and Classification Notebook | 0/TBD | Not started | - |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
