@@ -15,6 +15,7 @@ def test_execute_notebooks_no_op_with_zero_notebooks(tmp_path):
         capture_output=True,
         text=True,
         timeout=SUBPROCESS_TIMEOUT,
+        check=False,
     )
     combined_output = result.stdout + result.stderr
 
@@ -41,6 +42,7 @@ def test_execute_notebooks_fails_fast_on_first_error(write_notebook, tmp_path):
         capture_output=True,
         text=True,
         timeout=SUBPROCESS_TIMEOUT,
+        check=False,
     )
     combined_output = result.stdout + result.stderr
 

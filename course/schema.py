@@ -6,7 +6,9 @@ REQUIRED = ["sample_id", "lon", "lat", "year", "label", "label_source"]
 
 
 def embedding_cols(gdf, prefix: str = "A") -> list[str]:
-    return [c for c in gdf.columns if c.startswith(prefix) and c[len(prefix):].isdigit()]
+    return [
+        c for c in gdf.columns if c.startswith(prefix) and c[len(prefix) :].isdigit()
+    ]
 
 
 def validate(gdf, embedding_prefix: str = "A"):

@@ -33,6 +33,7 @@ def _import_in_subprocess(module_name: str) -> subprocess.CompletedProcess:
         [sys.executable, "-c", f"import {module_name}"],
         capture_output=True,
         text=True,
+        check=False,
     )
 
 

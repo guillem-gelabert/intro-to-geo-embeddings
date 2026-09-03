@@ -2,8 +2,12 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # docs/research holds a verbatim copy of the source research report.
+      # Keep it byte-identical to the original so provenance diffs stay clean.
       - id: trailing-whitespace
+        exclude: ^docs/research/
       - id: end-of-file-fixer
+        exclude: ^docs/research/
       - id: check-added-large-files
   - repo: https://github.com/kynan/nbstripout
     rev: 0.9.1
@@ -12,10 +16,19 @@ repos:
   - repo: https://github.com/mwouts/jupytext
     rev: v1.19.5
     hooks:
+      # jupytext treats .md as a notebook format, so an unscoped hook tries to
+      # parse every planning document as a notebook and fails. Course notebooks
+      # and their paired percent scripts live under notebooks/ only.
       - id: jupytext
         args: ["--sync"]
+        files: ^notebooks/.*\.(ipynb|py)$
+  # ruff 0.16 formats Python code blocks inside Markdown. Left unscoped it
+  # rewrites the research documents and the source report in docs/, which are
+  # reference material, not source code. Restrict both hooks to real Python.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.5
     hooks:
       - id: ruff
+        types_or: [python, pyi]
       - id: ruff-format
+        types_or: [python, pyi]
