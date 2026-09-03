@@ -643,3 +643,119 @@ plt.show()
 # extrapolate to a different climate and land-cover mix. In-region spatial
 # blocking matters too, and is worth teaching in its own right, just far
 # less dramatically here than the leave-region-out effect above.
+
+# %% [markdown]
+# ## Baseline: the identical pipeline on raw Sentinel-2 bands
+#
+# Everything above ran on 64-dimensional AlphaEarth embeddings. This
+# section re-runs the *identical* pipeline — same classifiers, same
+# `test_size`/`random_state`, same `make_blocks`/`GroupKFold` call, same
+# `LeaveOneGroupOut` call — on `S2_COLS`, the frozen table's raw Sentinel-2
+# reflectance bands, changing nothing except which feature matrix goes in.
+# This isolates the feature representation as the only variable, testing
+# the hypothesis raised above: are embeddings more leakage-resistant than
+# raw single-date spectral bands, or not? The numbers below are measured,
+# not assumed either way.
+
+# %% tags=["solution"]
+from course.schema import S2_COLS
+
+# A handful of points sit at the very edge of a Sentinel-2 scene and come
+# back NaN in these raw bands even though their AlphaEarth embedding (a
+# yearly composite) is complete -- drop them for this baseline only, and
+# say so, rather than let NaN silently propagate into StandardScaler/
+# LogisticRegression (which would otherwise produce a nonsense NaN score).
+bern_clf_s2 = bern_clf.dropna(subset=S2_COLS).reset_index(drop=True)
+combined_s2 = combined.dropna(subset=S2_COLS).reset_index(drop=True)
+print(
+    f"S2 baseline: dropped {len(bern_clf) - len(bern_clf_s2)} Bern row(s) and "
+    f"{len(combined) - len(combined_s2)} combined row(s) with NaN Sentinel-2 bands"
+)
+
+X_bern_s2 = bern_clf_s2[S2_COLS].to_numpy(np.float32)
+y_bern_s2 = bern_clf_s2["label"].to_numpy()
+groups_block_s2 = make_blocks(bern_clf_s2.to_crs("EPSG:2056"), block_size_m=BLOCK_SIZE_M)
+
+X_all_s2 = combined_s2[S2_COLS].to_numpy(np.float32)
+y_all_s2 = combined_s2["label"].to_numpy()
+region_groups_s2 = combined_s2["region"].to_numpy()
+
+# %%
+s2_models = {
+    "logreg": Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),
+        ]
+    ),
+    "random_forest": RandomForestClassifier(
+        n_estimators=200,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    ),
+}
+
+s2_trap, s2_block, s2_lro = {}, {}, {}
+for name, model in s2_models.items():
+    Xtr, Xte, ytr, yte = train_test_split(
+        X_bern_s2, y_bern_s2, test_size=0.3, random_state=RANDOM_STATE, stratify=y_bern_s2
+    )
+    model.fit(Xtr, ytr)
+    s2_trap[name] = balanced_accuracy_score(yte, model.predict(Xte))
+
+    s2_block[name] = spatial_cv_report(
+        model, X_bern_s2, y_bern_s2, groups=groups_block_s2,
+        cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
+    )["mean_balanced_accuracy"]
+
+    s2_lro[name] = spatial_cv_report(
+        model, X_all_s2, y_all_s2, groups=region_groups_s2, cv=LeaveOneGroupOut()
+    )["mean_balanced_accuracy"]
+
+    print(
+        f"S2 baseline ({name}): random_split={s2_trap[name]:.3f}, "
+        f"block_cv={s2_block[name]:.3f}, leave_region_out={s2_lro[name]:.3f}"
+    )
+
+# %%
+baseline_table = pd.DataFrame(
+    {
+        "AlphaEarth embeddings": [
+            trap_results["random_forest"]["balanced_accuracy"],
+            block_results["random_forest"]["mean_balanced_accuracy"],
+            lro_results["random_forest"]["mean_balanced_accuracy"],
+        ],
+        "Sentinel-2 raw bands": [
+            s2_trap["random_forest"],
+            s2_block["random_forest"],
+            s2_lro["random_forest"],
+        ],
+    },
+    index=["random split", "spatial-block CV", "leave-region-out"],
+)
+print("Comparison (random_forest, balanced accuracy):")
+print(baseline_table)
+
+embedding_block_gap = (
+    trap_results["random_forest"]["balanced_accuracy"]
+    - block_results["random_forest"]["mean_balanced_accuracy"]
+)
+s2_block_gap = s2_trap["random_forest"] - s2_block["random_forest"]
+print(
+    f"in-region block-CV gap: embeddings={embedding_block_gap:.3f}, "
+    f"Sentinel-2={s2_block_gap:.3f}"
+)
+
+# %% [markdown]
+# **Takeaway:** the table above reports what this run actually measured,
+# not an assumed direction. If the Sentinel-2 in-region block-CV gap comes
+# out larger than the embeddings' gap, that supports the hypothesis raised
+# earlier — AlphaEarth embeddings, which already aggregate a full year of
+# multi-modal spatial/temporal context per pixel, are more resistant to
+# naive adjacent-pixel leakage than raw single-date reflectance values,
+# which is itself a genuinely interesting, teachable result. If it does
+# not come out that way on this sample, that is reported just as plainly:
+# the honest number is the lesson, not a story picked in advance. Either
+# way, the leave-region-out gap — for both feature representations —
+# remains the larger, more consequential effect in this notebook.
