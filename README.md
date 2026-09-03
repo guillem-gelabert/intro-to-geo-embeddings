@@ -26,13 +26,13 @@ make test
 make execute-notebooks
 ```
 
-`make execute-notebooks` currently no-ops safely and prints a message that no solution notebooks were found — Phase 3 has not shipped one yet.
+`make execute-notebooks` headlessly executes every solution notebook under `notebooks/solutions/`, currently `02_similarity_and_classification.ipynb`.
 
 ## Notebooks
 
 | Notebook | Colab | Description |
 |----------|-------|--------------|
-| _(none yet)_ | | |
+| [`02_similarity_and_classification.ipynb`](notebooks/solutions/02_similarity_and_classification.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/guillem-gelabert/intro-to-geo-embeddings/blob/main/notebooks/solutions/02_similarity_and_classification.ipynb) | Similarity search and prototype queries over frozen AlphaEarth embeddings, a land-cover classifier, and the honest spatial-CV vs. random-split comparison (with a raw-Sentinel-2 baseline) -- no Earth Engine account needed. |
 
 <!--
 Colab badge URL template (used once notebooks exist):
