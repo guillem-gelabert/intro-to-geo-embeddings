@@ -27,12 +27,11 @@ from rasterio.vrt import WarpedVRT
 from rasterio.warp import transform_bounds
 from rasterio.windows import from_bounds
 
+from course.embeddings import N_BANDS
 from course.live import LiveSourceUnavailable
 
 AEF_INDEX_URL = "https://data.source.coop/tge-labs/aef/v1/annual/aef_index.parquet"
-AEF_GCS_BASE = (
-    "https://storage.googleapis.com/alphaearth_foundations/satellite_embedding/v1/annual"
-)
+AEF_GCS_BASE = "https://storage.googleapis.com/alphaearth_foundations/satellite_embedding/v1/annual"
 
 
 def find_tile(lon: float, lat: float, year: int) -> dict:
@@ -133,11 +132,7 @@ def read_window(
                     f"tile at {url} is in CRS {vrt.crs}, expected {dst_crs}"
                 )
             utm_bbox = transform_bounds("EPSG:4326", vrt.crs, *bbox_4326)
-            win = (
-                from_bounds(*utm_bbox, vrt.transform)
-                .round_offsets()
-                .round_lengths()
-            )
+            win = from_bounds(*utm_bbox, vrt.transform).round_offsets().round_lengths()
             raw = vrt.read(window=win)
             window_transform = vrt.window_transform(win)
     except rasterio.errors.RasterioIOError as exc:
@@ -146,3 +141,46 @@ def read_window(
         ) from exc
 
     return raw, window_transform
+
+
+def sample_points_from_window(
+    raw_unit: np.ndarray,
+    window_transform: rasterio.Affine,
+    points_xy: np.ndarray,
+) -> np.ndarray:
+    """Extract per-point 64-D vectors from an already-dequantized window.
+
+    `raw_unit` is `(64, H, W)` float32 — the caller runs
+    `course.embeddings.dequantize_aef` on the whole window ONCE before
+    calling this. This function never touches int8 or re-applies the
+    dequantization formula.
+
+    `points_xy` is `(N, 2)`, `(x, y)` coordinates in the SAME CRS as
+    `window_transform`. For each point, `col, row = ~window_transform @ (x,
+    y)` is rounded to the nearest integer and used to index
+    `raw_unit[:, row, col]`. Points whose rounded `(row, col)` fall outside
+    `[0, H) x [0, W)` produce an all-NaN `(64,)` row instead of raising or
+    wrapping around.
+
+    Returns `(N, 64)`: one row per input point, in input order.
+
+    This function exists specifically so the pipeline never loops
+    `.sample()`/`.read()` per point against a remote COG (Pitfall 4,
+    0.3-0.7s/point measured) — every point is an array-index lookup into
+    memory already fetched by `read_window`.
+    """
+    points_xy = np.asarray(points_xy, dtype=np.float64)
+    n_points = points_xy.shape[0]
+    _, height, width = raw_unit.shape
+
+    inv_transform = ~window_transform
+    cols, rows = inv_transform @ (points_xy[:, 0], points_xy[:, 1])
+    rows = np.round(rows).astype(np.int64)
+    cols = np.round(cols).astype(np.int64)
+
+    in_bounds = (rows >= 0) & (rows < height) & (cols >= 0) & (cols < width)
+
+    result = np.full((n_points, N_BANDS), np.nan, dtype=np.float32)
+    valid_idx = np.nonzero(in_bounds)[0]
+    result[valid_idx, :] = raw_unit[:, rows[valid_idx], cols[valid_idx]].T
+    return result
