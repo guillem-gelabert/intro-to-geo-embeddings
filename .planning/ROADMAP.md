@@ -135,7 +135,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — notebook: Header, Setup, Data, Similarity 1/2/3 (search-by-example, WRONG-conclusion trap, prototype ladder + precision@k)
+- [x] 03-02-PLAN.md — notebook: Header, Setup, Data, Similarity 1/2/3 (search-by-example, WRONG-conclusion trap, prototype ladder + precision@k)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -232,7 +232,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
-| 3. Similarity Search and Classification Notebook | 1/4 | In Progress|  |
+| 3. Similarity Search and Classification Notebook | 2/4 | In Progress|  |
 | 4. Earlier Module Solution Notebooks | 0/TBD | Not started | - |
 | 5. Later Module Solution Notebooks | 0/TBD | Not started | - |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
