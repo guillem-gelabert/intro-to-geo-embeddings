@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Repository and Environment Scaffold** - Pinned Python 3.12 env, `course` package contract, headless runner, README banner
 - [ ] **Phase 2: Frozen Two-Region Teaching Datasets** - Credential-free multi-year labelled embedding tables with provenance, card and integrity tests
 - [x] **Phase 3: Similarity Search and Classification Notebook** - The flagship solution notebook and the reusable helpers every later module imports (completed 2026-09-03)
-- [ ] **Phase 4: Earlier Module Solution Notebooks** - Refresher, representation foundations, AlphaEarth access and visualization with its live/offline tiers
+- [x] **Phase 4: Earlier Module Solution Notebooks** - Refresher, representation foundations, AlphaEarth access and visualization with its live/offline tiers (completed 2026-09-04)
 - [ ] **Phase 5: Later Module Solution Notebooks** - Change detection and validation, embedding ecosystems, capstone, provenance checklist
 - [ ] **Phase 6: Exercise Notebooks and Assessments** - Generated exercises with checkpoints, plus quizzes, assignments and the capstone rubric
 - [ ] **Phase 7: Slide Decks** - One repo-built 16:9 deck per module with notebook figures, trap slides and speaker notes
@@ -169,16 +169,16 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-04-PLAN.md — 00b_representation_inspection.ipynb (AlphaEarth pixel vs Clay patch vs optional SatCLIP)
-- [ ] 04-05-PLAN.md — 01_alphaearth_access_visualize.ipynb: Header, Setup, Path A (Earth Engine, skip-execution)
+- [x] 04-04-PLAN.md — 00b_representation_inspection.ipynb (AlphaEarth pixel vs Clay patch vs optional SatCLIP)
+- [x] 04-05-PLAN.md — 01_alphaearth_access_visualize.ipynb: Header, Setup, Path A (Earth Engine, skip-execution)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-06-PLAN.md — 01_alphaearth_access_visualize.ipynb: Path B (offline, dequantization/pseudo-RGB/PCA), EARLY-05 phrasing-rule test
+- [x] 04-06-PLAN.md — 01_alphaearth_access_visualize.ipynb: Path B (offline, dequantization/pseudo-RGB/PCA), EARLY-05 phrasing-rule test
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 04-07-PLAN.md — DATA_CARD.md/README.md consolidation, repo-wide headless-execution smoke test
+- [x] 04-07-PLAN.md — DATA_CARD.md/README.md consolidation, repo-wide headless-execution smoke test
 
 ### Phase 5: Later Module Solution Notebooks
 
@@ -275,7 +275,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Repository and Environment Scaffold | 4/5 | In Progress|  |
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
-| 4. Earlier Module Solution Notebooks | 3/7 | In Progress|  |
+| 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
 | 5. Later Module Solution Notebooks | 0/9 | In Progress| - |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
 | 7. Slide Decks | 0/TBD | Not started | - |
