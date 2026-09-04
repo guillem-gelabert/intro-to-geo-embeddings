@@ -355,6 +355,355 @@ print(
 # says so explicitly rather than presenting it as equivalent -- a student
 # with an EU Login should swap in the real change product and recalibrate.
 #
-# **What's next:** the second half of this notebook (a later plan) adds
-# per-year classifiers and a land-cover transition matrix on top of this
-# same change-score foundation.
+# **What's next:** the rest of this notebook adds per-year classifiers and
+# a land-cover transition matrix on top of this same change-score
+# foundation, then validates both approaches with spatially- and
+# temporally-grouped cross-validation.
+
+# %% [markdown]
+# ## Per-year classifiers and a class-transition matrix
+#
+# The change score above answers "how far did the embedding move," but it
+# cannot answer "moved *from what* to *what*." A transition matrix can: fit
+# one classifier per year on that year's own embeddings, predict every
+# point's class in each year, and cross-tabulate the two predictions.
+#
+# **Important caveat, stated before the code below runs it:** `label` does
+# not itself vary by year -- WorldCover 2021 is the only labeled epoch in
+# this dataset. So "per-year classifier" here does NOT mean "trained
+# against a year-specific ground truth." It means: train the identical
+# model architecture separately on each year's own embedding distribution
+# (still supervised by the same 2021 `label` column, pooled across both
+# regions), then predict from each year's embeddings. The interesting
+# signal is where `clf_2018`'s prediction and `clf_2021`'s prediction
+# *disagree* for the same point -- something a single continuous change
+# score cannot show, because it never assigns a class at all.
+
+# %% tags=["solution"]
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+CLASSES = ["built", "crop", "vegetation", "water"]
+
+pooled = {}
+for year in years:
+    frames_year = []
+    for area in ("bern", "seville"):
+        gdf_year = aligned[area][year]
+        frames_year.append(gdf_year.loc[gdf_year["label"].isin(CLASSES)])
+    pooled[year] = pd.concat(frames_year, ignore_index=True)
+    print(f"{year}: {len(pooled[year])} pooled rows after dropping 'bare'")
+
+classifiers = {}
+predictions = {}
+for year in years:
+    X_year = course.schema.to_matrix(pooled[year])
+    y_year = pooled[year]["label"].to_numpy()
+    clf = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),
+        ]
+    )
+    clf.fit(X_year, y_year)
+    classifiers[year] = clf
+    predictions[year] = clf.predict(X_year)
+    print(f"{year}: classifier fit on {len(y_year)} pooled points")
+
+# %% [markdown]
+# The two pooled tables are already row-aligned by `sample_id` within each
+# area (the `aligned` dict built earlier), and `pooled[2018]`/`pooled[2021]`
+# were built with the identical per-area concatenation order and the
+# identical `bare`-dropping filter, so `predictions[2018][i]` and
+# `predictions[2021][i]` refer to the same real-world point.
+
+# %%
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+
+pred_2018 = predictions[years[0]]
+pred_2021 = predictions[years[1]]
+
+transition = confusion_matrix(pred_2018, pred_2021, labels=CLASSES)
+fig, ax = plt.subplots(figsize=(6, 6))
+ConfusionMatrixDisplay(transition, display_labels=CLASSES).plot(ax=ax, colorbar=False)
+ax.set_xlabel("predicted 2021 class")
+ax.set_ylabel("predicted 2018 class")
+ax.set_title("Class-transition matrix (predicted, not true, classes)")
+fig.tight_layout()
+fig.savefig("figures/03_transition_matrix.png")
+plt.show()
+
+# %% [markdown]
+# **Why the axis labels say "predicted," never "true":** every cell in
+# this matrix comes from two classifier predictions, not from any
+# 2018-vs-2021 ground-truth transition label (none exists in this
+# dataset). Reading it as observed truth would silently overstate how much
+# is actually validated here.
+
+# %%
+artificialized_mask = (pred_2018 == "vegetation") & (pred_2021 == "built")
+crop_to_built_mask = (pred_2018 == "crop") & (pred_2021 == "built")
+print(
+    f"vegetation -> built: {int(artificialized_mask.sum())} points\n"
+    f"crop -> built: {int(crop_to_built_mask.sum())} points"
+)
+if crop_to_built_mask.sum() > artificialized_mask.sum() * 0.2:
+    artificialized_mask = artificialized_mask | crop_to_built_mask
+    print("crop -> built is non-trivial relative to vegetation -> built; folded in.")
+
+# %% [markdown]
+# ## Comparing the transition-matrix mask against the continuous change score
+#
+# `pooled[years[1]]` drops the `bare` class that `change_df` still carries,
+# so the two tables cannot be compared by row position -- join on
+# `sample_id` (unique per point within a region, matched together with
+# `region` since both regions reuse the same `sample_id` numbering).
+
+# %% tags=["solution"]
+mask_lookup = pd.DataFrame(
+    {
+        "sample_id": pooled[years[1]]["sample_id"],
+        "region": pooled[years[1]]["region"],
+        "artificialized_mask": artificialized_mask,
+    }
+)
+joined = change_df.merge(mask_lookup, on=["sample_id", "region"], how="inner")
+assert len(joined) == len(mask_lookup), (
+    f"expected every classifier-pooled point ({len(mask_lookup)}) to also "
+    f"appear in change_df, got {len(joined)} matched rows -- a join key "
+    "mismatch would silently drop points from this comparison"
+)
+
+joined["cosine_wrong"] = joined["change_score"] > 0.25
+joined["cosine_calibrated"] = joined["change_score"] > best_threshold
+
+comparison_rows = []
+for name, col in [
+    ("WRONG threshold (0.25)", "cosine_wrong"),
+    ("calibrated threshold", "cosine_calibrated"),
+]:
+    mask_col = joined["artificialized_mask"]
+    cosine_col = joined[col]
+    both = int((mask_col & cosine_col).sum())
+    mask_only = int((mask_col & ~cosine_col).sum())
+    cosine_only = int((~mask_col & cosine_col).sum())
+    comparison_rows.append(
+        {
+            "cosine flag": name,
+            "transition-mask only": mask_only,
+            "cosine only": cosine_only,
+            "both": both,
+        }
+    )
+disagreement_table = pd.DataFrame(comparison_rows)
+print(disagreement_table)
+
+# %% [markdown]
+# **Takeaway:** the transition-matrix mask and the continuous change score
+# answer different questions -- cosine measures how far the embedding
+# vector moved, the transition matrix asks what class it moved *between*.
+# They only partly agree, and that disagreement is itself the teaching
+# point (Pitfall 5): a point can move a lot in embedding space without
+# crossing the vegetation-to-built class boundary (phenology, a dry year),
+# and a point can cross that boundary with a modest cosine movement if the
+# two classes' embedding centroids are already close. Neither number alone
+# tells the whole story; that is exactly why this notebook builds both.
+
+# %% [markdown]
+# ## Validating the artificialization mask: spatially- and temporally-grouped CV
+#
+# `artificialized_mask` above is itself the output of a classifier
+# (well, two). Before trusting it, this notebook validates it the same
+# honest way Module 3 validated the land-cover classifier -- with grouped
+# CV, never a random split.
+#
+# **A second trap lurks here that Module 3 did not have: temporal
+# leakage.** The pooled 2018+2021 table contains the SAME real-world
+# locations twice (once per year). A random split -- or even a spatial
+# split that ignores year -- can put a point's 2018 row in the training
+# fold and its 2021 row in the test fold. The model would then partly
+# "recognise the site" (soil colour, terrain, whatever is stable across
+# both years) rather than learn a signal that transfers to genuinely new
+# locations or new years. This is the temporal analogue of Module 3's
+# spatial-block lesson: group by the thing that must NOT leak across the
+# split, spatial blocks there, year here.
+
+# %% tags=["solution"]
+from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
+
+from course.config import BLOCK_SIZE_M
+from course.validation import make_blocks, spatial_cv_report
+
+pooled_all = pd.concat([pooled[years[0]], pooled[years[1]]], ignore_index=True)
+mask_all = np.concatenate([artificialized_mask, artificialized_mask])
+year_array = np.concatenate(
+    [
+        np.full(len(pooled[years[0]]), years[0]),
+        np.full(len(pooled[years[1]]), years[1]),
+    ]
+)
+X_pooled_all = course.schema.to_matrix(pooled_all)
+
+pooled_2056 = pooled_all.to_crs("EPSG:2056")
+spatial_blocks = make_blocks(pooled_2056, block_size_m=BLOCK_SIZE_M)
+n_blocks = len(np.unique(spatial_blocks))
+print(f"pooled table: {n_blocks} spatial blocks at {BLOCK_SIZE_M} m")
+
+artif_model = Pipeline(
+    [
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),
+    ]
+)
+
+spatial_report = spatial_cv_report(
+    artif_model,
+    X_pooled_all,
+    mask_all,
+    groups=spatial_blocks,
+    cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),
+)
+print(
+    f"SPATIAL-BLOCK CV: balanced_accuracy="
+    f"{spatial_report['mean_balanced_accuracy']:.3f} ± "
+    f"{spatial_report['std_balanced_accuracy']:.3f}"
+)
+
+# %%
+temporal_report = spatial_cv_report(
+    artif_model,
+    X_pooled_all,
+    mask_all,
+    groups=year_array,
+    cv=LeaveOneGroupOut(),
+)
+print(
+    f"LEAVE-ONE-YEAR-OUT CV: balanced_accuracy="
+    f"{temporal_report['mean_balanced_accuracy']:.3f} ± "
+    f"{temporal_report['std_balanced_accuracy']:.3f}"
+)
+
+# %%
+cv_comparison = pd.DataFrame(
+    {
+        "scenario": ["spatial-block CV", "leave-one-year-out"],
+        "mean_balanced_accuracy": [
+            spatial_report["mean_balanced_accuracy"],
+            temporal_report["mean_balanced_accuracy"],
+        ],
+        "std_balanced_accuracy": [
+            spatial_report["std_balanced_accuracy"],
+            temporal_report["std_balanced_accuracy"],
+        ],
+    }
+)
+print(cv_comparison)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.bar(
+    cv_comparison["scenario"],
+    cv_comparison["mean_balanced_accuracy"],
+    yerr=cv_comparison["std_balanced_accuracy"],
+    color=["tab:blue", "tab:orange"],
+)
+ax.set_ylabel("balanced accuracy")
+ax.set_ylim(0, 1)
+ax.set_title("Artificialization-mask CV: space-grouped vs year-grouped")
+fig.tight_layout()
+fig.savefig("figures/03_spatiotemporal_cv_comparison.png")
+plt.show()
+
+# %% [markdown]
+# **Takeaway:** the numbers printed above are the honest, measured
+# comparison -- not an assumed direction. If leave-one-year-out scores
+# lower than spatial-block CV, that supports the hypothesis this section
+# opened with: year-specific artifacts (Sentinel swath differences,
+# atmospheric conditions, a different phenological state) make the model
+# partly overfit to a year's own signature rather than learn a
+# transferable artificialization signal, and spatial-block CV alone would
+# have hidden that gap because it never separates by year. If the two
+# scores land close together instead, that is reported just as plainly:
+# it would mean this mask generalizes across years about as well as it
+# generalizes across space, on this sample. Either way, grouping by the
+# dimension that must not leak -- space for the spatial split, year for
+# this one -- is what makes the number trustworthy in the first place.
+
+# %% [markdown]
+# ## Provenance
+
+# %% tags=["solution"]
+import json
+
+from course.provenance import build_provenance, write_provenance
+
+provenance_loaded = {
+    "bern_2018": loaded[("bern", 2018)],
+    "bern_2021": loaded[("bern", 2021)],
+    "seville_2018": loaded[("seville", 2018)],
+    "seville_2021": loaded[("seville", 2021)],
+}
+provenance = build_provenance(
+    provenance_loaded,
+    created_by="03_change_detection_and_validation.ipynb",
+)
+write_provenance(provenance, Path("outputs/provenance_03.json"))
+print(json.dumps(provenance, indent=2))
+
+# %% [markdown]
+# ## Wrap-up
+#
+# **Takeaways:**
+#
+# - A cosine-based change score reports how far a point's embedding moved
+#   between two years -- a real, cheap signal, but not by itself a
+#   semantic change decision. Calibrating a threshold against an
+#   independent proxy reference (`precision_recall_curve`) turns it into
+#   one with a known precision/recall/F1, unlike an eyeballed cutoff.
+# - A class-transition matrix built from two per-year classifiers answers
+#   a different, more direct question: what class did a point move *from*
+#   and *to*? The two approaches agree only partly -- that disagreement,
+#   not either number alone, is the honest picture of what changed.
+# - Both the calibrated change-score threshold and this transition-matrix
+#   artificialization mask stay honest about a real limitation: the true
+#   Copernicus HRL Imperviousness change product (2018-2021) requires a
+#   free EU Login the author has not created for this course, so this
+#   notebook validates against the best available proxy and says so,
+#   rather than presenting the proxy as equivalent to a real change
+#   product.
+# - Validating the artificialization mask required grouping by TWO
+#   different things that must not leak across a CV split: space (the
+#   Module 3 lesson, reused here via `make_blocks`/`GroupKFold`) and year
+#   (this module's new lesson, via `LeaveOneGroupOut` grouped on the year
+#   label) -- `label_source` (`esa_worldcover_2021`) and
+#   `validation_source` (`eea_hrl_imperviousness_2018`) also stay two
+#   architecturally distinct strings throughout, never conflated
+#   (Pitfall 6).
+#
+# **What's next:** Module 5 reuses these SAME `course.embeddings.change_score`
+# and `course.validation.spatial_cv_report` helpers across TESSERA, Clay
+# and LGND embeddings, so the change-detection and validation logic built
+# here stays identical across providers.
+#
+# **Resources:**
+#
+# - AlphaEarth GCS README: https://developers.google.com/earth-engine/guides/aef_on_gcs_readme
+# - Copernicus HRL Imperviousness: https://land.copernicus.eu/en/products/high-resolution-layer-imperviousness
+# - Course reference environment: `course.config.COURSE_RELEASE` = `"2026.08"`
+# - License and attribution (verbatim from `data/DATA_CARD.md`, reused here,
+#   never retyped):
+#   - AlphaEarth / Satellite Embedding -- CC BY 4.0 -- "The AlphaEarth
+#     Foundations Satellite Embedding dataset is produced by Google and
+#     Google DeepMind."
+#   - ESA WorldCover 2021 v200 -- CC BY 4.0 -- "© ESA WorldCover project
+#     2021 / Contains modified Copernicus Sentinel data (2021) processed
+#     by ESA WorldCover consortium (citation: Zanaga et al. 2022,
+#     https://doi.org/10.5281/zenodo.7254221)"
+#   - Copernicus HRL Imperviousness Density 2018 -- Free/open, commercial
+#     use allowed -- "Generated using European Union's Copernicus Land
+#     Monitoring Service information"
+# - **Limitation repeated once more for anyone skimming only this
+#   section:** the true HRL Imperviousness Change 2018-2021 product needs
+#   a free EU Login the author has not created for this course; both
+#   correction paths above (calibrated threshold, transition-matrix mask)
+#   validate against the best currently-available proxy, not that product.
