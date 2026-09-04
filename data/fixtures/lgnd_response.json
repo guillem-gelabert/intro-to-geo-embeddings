@@ -1,0 +1,27 @@
+{
+  "fixture_type": "recorded-illustrative",
+  "note": "Hand-authored, NOT a live capture. Shape mirrors LGND's published OpenAPI reference for a similarity-search response as of this course's 2026-08 reference release. Confirm against the live OpenAPI spec before relying on this shape in production code.",
+  "query": {
+    "lon": 7.4474,
+    "lat": 46.9480,
+    "collection": "sentinel-2-l2a",
+    "k": 3
+  },
+  "results": [
+    {
+      "stac_item_id": "S2C_32TLT_20250617_0_L2A",
+      "score": 1.0,
+      "datetime": "2025-06-17T12:38:08.887000+02:00"
+    },
+    {
+      "stac_item_id": "S2C_32TLT_20250522_0_L2A",
+      "score": 0.912,
+      "datetime": "2025-05-22T12:41:02.113000+02:00"
+    },
+    {
+      "stac_item_id": "S2C_32TLT_20250428_0_L2A",
+      "score": 0.887,
+      "datetime": "2025-04-28T12:39:44.502000+02:00"
+    }
+  ]
+}
