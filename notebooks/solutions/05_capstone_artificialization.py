@@ -140,7 +140,7 @@ Path("outputs").mkdir(exist_ok=True)
 # %% tags=["parameters"]
 AOI = "bern"  # EDIT ME -- try "seville", or point course.data.load at your own AOI
 
-# %% tags=["solution"]
+# %%
 import course.data
 import course.schema
 from course.config import ANCHOR_YEARS, AREAS
@@ -178,7 +178,7 @@ print(
 # a lot and is still moving," which is exactly the ambiguity a raw
 # `1 - cosine` threshold falls into.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from course.embeddings import change_score
 
 X_base = course.schema.to_matrix(years[ANCHOR_YEARS[-1]])
@@ -204,7 +204,7 @@ print(
 # capstone submission is free to pick either target; whichever is chosen,
 # state it here and justify it, exactly as this cell does.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 CLASSES = ["built", "crop", "vegetation", "water"]
 
 label_aoi = years[ANCHOR_YEARS[-1]]["label"].to_numpy()
@@ -213,7 +213,7 @@ X_aoi_clf = X_aoi[class_mask]
 y_aoi_clf = label_aoi[class_mask]
 print(f"{AOI}: {len(y_aoi_clf)}/{len(label_aoi)} rows kept after dropping 'bare'")
 
-# %%
+# %% tags=["task"]
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -236,7 +236,7 @@ print(f"fitted logreg on {AOI}: train accuracy={model.score(X_aoi_clf, y_aoi_clf
 # `course.validation.spatial_cv_report` call shape Module 3 used, changing
 # only `groups` and `cv` — never a hand-rolled CV loop.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
 
 from course.config import BLOCK_SIZE_M
@@ -265,7 +265,7 @@ print(
     f"{block_report['std_balanced_accuracy']:.3f}"
 )
 
-# %% tags=["solution"]
+# %% tags=["task"]
 held_out_label = held_out["label"].to_numpy()
 held_out_class_mask = np.isin(held_out_label, CLASSES)
 held_out_clf = held_out.loc[held_out_class_mask].reset_index(drop=True)
@@ -334,7 +334,7 @@ print(comparison)
 # layer is the honest framing; an unqualified "artificialized/not" map is
 # not.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 import matplotlib.pyplot as plt
 
 pred_aoi = model.predict(X_aoi_clf)
@@ -374,7 +374,7 @@ plt.show()
 # A single accuracy number, with neither of these alongside it, is an
 # overconfident presentation of a change/classification map.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 proba = model.predict_proba(X_aoi_clf)
 sorted_proba = np.sort(proba, axis=1)
 margin = sorted_proba[:, -1] - sorted_proba[:, -2]
@@ -416,7 +416,7 @@ print(
 # notebook's own output is held to the same `templates/PROVENANCE_CHECKLIST.md`
 # standard demonstrated throughout the course, rather than only described.
 
-# %% tags=["solution"]
+# %%
 import json
 
 from course.provenance import build_provenance, write_provenance

@@ -118,7 +118,7 @@ Path("outputs").mkdir(exist_ok=True)
 # across both study areas, so a 2018/2021 pair joins directly without any
 # extra sampling.
 
-# %% tags=["solution"]
+# %%
 import course.data
 import course.schema
 from course.config import AREAS
@@ -177,7 +177,7 @@ print(summary)
 # movement only -- it does not know, and does not claim to know, *why* a
 # point moved.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from course.embeddings import change_score
 
 frames = []
@@ -289,7 +289,7 @@ print(
 # change product and re-run this calibration; what follows is the honest,
 # currently-available substitute, not a claim of equivalence.
 
-# %% tags=["solution"]
+# %%
 known_change = (change_df["imd_2018"] < 20) & (change_df["label"] == "built")
 known_unchanged = ((change_df["imd_2018"] >= 70) & (change_df["label"] == "built")) | (
     (change_df["imd_2018"] < 20) & (change_df["label"] != "built")
@@ -301,7 +301,7 @@ print(
     f"({int(known_change.sum())} known_change, {int(known_unchanged.sum())} known_unchanged)"
 )
 
-# %%
+# %% tags=["task"]
 from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.metrics import precision_recall_curve
 
@@ -379,7 +379,7 @@ print(
 # *disagree* for the same point -- something a single continuous change
 # score cannot show, because it never assigns a class at all.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -418,7 +418,7 @@ for year in years:
 # identical `bare`-dropping filter, so `predictions[2018][i]` and
 # `predictions[2021][i]` refer to the same real-world point.
 
-# %%
+# %% tags=["task"]
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 
 pred_2018 = predictions[years[0]]
@@ -441,7 +441,7 @@ plt.show()
 # dataset). Reading it as observed truth would silently overstate how much
 # is actually validated here.
 
-# %%
+# %% tags=["task"]
 artificialized_mask = (pred_2018 == "vegetation") & (pred_2021 == "built")
 crop_to_built_mask = (pred_2018 == "crop") & (pred_2021 == "built")
 print(
@@ -460,7 +460,7 @@ if crop_to_built_mask.sum() > artificialized_mask.sum() * 0.2:
 # `sample_id` (unique per point within a region, matched together with
 # `region` since both regions reuse the same `sample_id` numbering).
 
-# %% tags=["solution"]
+# %%
 mask_lookup = pd.DataFrame(
     {
         "sample_id": pooled[years[1]]["sample_id"],
@@ -529,7 +529,7 @@ print(disagreement_table)
 # spatial-block lesson: group by the thing that must NOT leak across the
 # split, spatial blocks there, year here.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
 
 from course.config import BLOCK_SIZE_M
@@ -570,7 +570,7 @@ print(
     f"{spatial_report['std_balanced_accuracy']:.3f}"
 )
 
-# %%
+# %% tags=["task"]
 temporal_report = spatial_cv_report(
     artif_model,
     X_pooled_all,
@@ -632,7 +632,7 @@ plt.show()
 # %% [markdown]
 # ## Provenance
 
-# %% tags=["solution"]
+# %%
 import json
 
 from course.provenance import build_provenance, write_provenance

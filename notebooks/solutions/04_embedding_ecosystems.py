@@ -121,7 +121,7 @@ Path("outputs").mkdir(exist_ok=True)
 # `tools/capture_provider_fixtures.py`, so the section runs identically
 # whether or not the extras are installed.
 
-# %% tags=["solution"]
+# %%
 try:
     import geotessera
 
@@ -177,7 +177,7 @@ if not (HAS_GEOTESSERA and HAS_DUCKDB):
 # %% tags=["parameters"]
 TESSERA_YEAR = 2024  # EDIT ME
 
-# %% tags=["solution"]
+# %%
 import json
 
 import course.data
@@ -245,7 +245,7 @@ else:
 # provider portability — verify the contract every time you change
 # provider, rather than copying an assumption forward.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 query_vec = tessera_vectors[0]
 sims = cosine_similarity_map(query_vec, tessera_vectors)
 
@@ -278,7 +278,7 @@ print(ranked)
 # across all three is the *operation* (`cosine_similarity_map`,
 # `norm_diagnostics`), not the numbers.
 
-# %% tags=["solution"]
+# %%
 CLAY_FIXTURE_PATH = Path("data/fixtures/clay_bern_sample.json")
 CLAY_PARQUET_URL = (
     "https://data.source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a/aggregated/"
@@ -330,7 +330,7 @@ else:
         "with, but not proof of, a general unit-norm guarantee."
     )
 
-# %% tags=["solution"]
+# %% tags=["task"]
 clay_query = clay_vectors[0]
 clay_sims = cosine_similarity_map(clay_query, clay_vectors)
 clay_top_sim = float(np.sort(clay_sims)[-2])
@@ -373,7 +373,7 @@ print(
 # confirm against the live OpenAPI spec before depending on it in your own
 # code, since third-party API shapes can change between course releases.
 
-# %% tags=["solution"]
+# %%
 import requests
 
 LGND_TOKEN = os.environ.get("LGND_TOKEN")
@@ -463,7 +463,7 @@ for r in lgnd_result["results"]:
 # JSON-serializable dict, so this hand-built structure is still written
 # through it.
 
-# %% tags=["solution"]
+# %%
 from datetime import UTC, datetime
 
 from course.provenance import write_provenance
