@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Frozen Two-Region Teaching Datasets** - Credential-free multi-year labelled embedding tables with provenance, card and integrity tests
 - [x] **Phase 3: Similarity Search and Classification Notebook** - The flagship solution notebook and the reusable helpers every later module imports (completed 2026-09-03)
 - [x] **Phase 4: Earlier Module Solution Notebooks** - Refresher, representation foundations, AlphaEarth access and visualization with its live/offline tiers (completed 2026-09-04)
-- [ ] **Phase 5: Later Module Solution Notebooks** - Change detection and validation, embedding ecosystems, capstone, provenance checklist
+- [x] **Phase 5: Later Module Solution Notebooks** - Change detection and validation, embedding ecosystems, capstone, provenance checklist (completed 2026-09-04)
 - [ ] **Phase 6: Exercise Notebooks and Assessments** - Generated exercises with checkpoints, plus quizzes, assignments and the capstone rubric
 - [ ] **Phase 7: Slide Decks** - One repo-built 16:9 deck per module with notebook figures, trap slides and speaker notes
 - [ ] **Phase 8: Narration Scripts** - Recording-ready two-column AV scripts timed to the 360-minute syllabus
@@ -215,7 +215,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 05-09-PLAN.md — README Notebooks table, templates link, full four-notebook headless verification gate
+- [x] 05-09-PLAN.md — README Notebooks table, templates link, full four-notebook headless verification gate
 
 ### Phase 6: Exercise Notebooks and Assessments
 
@@ -276,7 +276,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
-| 5. Later Module Solution Notebooks | 8/9 | In Progress|  |
+| 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
 | 7. Slide Decks | 0/TBD | Not started | - |
 | 8. Narration Scripts | 0/TBD | Not started | - |
