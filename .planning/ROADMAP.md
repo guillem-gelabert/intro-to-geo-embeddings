@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Similarity Search and Classification Notebook** - The flagship solution notebook and the reusable helpers every later module imports (completed 2026-09-03)
 - [x] **Phase 4: Earlier Module Solution Notebooks** - Refresher, representation foundations, AlphaEarth access and visualization with its live/offline tiers (completed 2026-09-04)
 - [x] **Phase 5: Later Module Solution Notebooks** - Change detection and validation, embedding ecosystems, capstone, provenance checklist (completed 2026-09-04)
-- [ ] **Phase 6: Exercise Notebooks and Assessments** - Generated exercises with checkpoints, plus quizzes, assignments and the capstone rubric
+- [x] **Phase 6: Exercise Notebooks and Assessments** - Generated exercises with checkpoints, plus quizzes, assignments and the capstone rubric (completed 2026-09-04)
 - [ ] **Phase 7: Slide Decks** - One repo-built 16:9 deck per module with notebook figures, trap slides and speaker notes
 - [ ] **Phase 8: Narration Scripts** - Recording-ready two-column AV scripts timed to the 360-minute syllabus
 
@@ -243,7 +243,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 06-06-PLAN.md — solution-link mechanism, generate all 7 exercise notebooks, regeneration + stub-boundary tests
+- [x] 06-06-PLAN.md — solution-link mechanism, generate all 7 exercise notebooks, regeneration + stub-boundary tests
 
 **Rationale for grouping assessments here:** quizzes and exercise checkpoints are the same layer — the learner's self-verification — and both are derived from a frozen solution notebook by quoting the exact cell that proves the point. Building them together keeps each module's practice-and-check bundle consistent, and it puts the quizzes on disk before Phase 8, where SCRIPT-05 requires every narration script to reference its module's exercise tasks and quiz.
 
@@ -290,7 +290,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
-| 6. Exercise Notebooks and Assessments | 5/6 | In Progress|  |
+| 6. Exercise Notebooks and Assessments | 6/6 | Complete   | 2026-09-04 |
 | 7. Slide Decks | 0/TBD | Not started | - |
 | 8. Narration Scripts | 0/TBD | Not started | - |
 
