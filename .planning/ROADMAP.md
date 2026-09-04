@@ -236,8 +236,8 @@ Plans:
 **Wave 1**
 
 - [x] 06-01-PLAN.md — exercise-notebook generator (tools/derive_exercise.py) with unit tests, tag vocabulary
-- [ ] 06-02-PLAN.md — tag learning cells + appendix content: 00_embedding_refresher, 00b_representation_inspection, 01_alphaearth_access_visualize, 02_similarity_and_classification
-- [ ] 06-03-PLAN.md — tag learning cells + appendix content: 03_change_detection_and_validation, 04_embedding_ecosystems, 05_capstone_artificialization
+- [x] 06-02-PLAN.md — tag learning cells + appendix content: 00_embedding_refresher, 00b_representation_inspection, 01_alphaearth_access_visualize, 02_similarity_and_classification
+- [x] 06-03-PLAN.md — tag learning cells + appendix content: 03_change_detection_and_validation, 04_embedding_ecosystems, 05_capstone_artificialization
 - [x] 06-04-PLAN.md — refresher diagnostic + quizzes for 00b, 01, 02
 - [x] 06-05-PLAN.md — quizzes for 03, 04; assignments for 02, 03, 04; capstone rubric + proposal template
 
@@ -290,7 +290,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
-| 6. Exercise Notebooks and Assessments | 3/6 | In Progress|  |
+| 6. Exercise Notebooks and Assessments | 5/6 | In Progress|  |
 | 7. Slide Decks | 0/TBD | Not started | - |
 | 8. Narration Scripts | 0/TBD | Not started | - |
 
