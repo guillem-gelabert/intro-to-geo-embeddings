@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Earlier Module Solution Notebooks** - Refresher, representation foundations, AlphaEarth access and visualization with its live/offline tiers (completed 2026-09-04)
 - [x] **Phase 5: Later Module Solution Notebooks** - Change detection and validation, embedding ecosystems, capstone, provenance checklist (completed 2026-09-04)
 - [x] **Phase 6: Exercise Notebooks and Assessments** - Generated exercises with checkpoints, plus quizzes, assignments and the capstone rubric (completed 2026-09-04)
-- [ ] **Phase 7: Slide Decks** - One repo-built 16:9 deck per module with notebook figures, trap slides and speaker notes
+- [x] **Phase 7: Slide Decks** - One repo-built 16:9 deck per module with notebook figures, trap slides and speaker notes (completed 2026-09-04)
 - [ ] **Phase 8: Narration Scripts** - Recording-ready two-column AV scripts timed to the 360-minute syllabus
 
 ## Phase Details
@@ -266,7 +266,7 @@ Plans:
 - [x] 07-02-PLAN.md — Decks: 00 refresher, 00b representation inspection (foundations deck), 01 access/visualize
 - [x] 07-03-PLAN.md — Decks: 02 similarity/classification (flagship), 03 change detection and validation
 - [x] 07-04-PLAN.md — Decks: 04 ecosystems, 05 capstone, 06 provenance/licensing (eighth deck, no source notebook)
-- [ ] 07-05-PLAN.md — Structural checker (tools/verify_slides.py), pytest wrapper, full build run (make slides / slides-pdf)
+- [x] 07-05-PLAN.md — Structural checker (tools/verify_slides.py), pytest wrapper, full build run (make slides / slides-pdf)
 
 **UI hint**: yes
 
@@ -316,7 +316,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
 | 6. Exercise Notebooks and Assessments | 6/6 | Complete   | 2026-09-04 |
-| 7. Slide Decks | 4/5 | In Progress|  |
+| 7. Slide Decks | 5/5 | Complete   | 2026-09-04 |
 | 8. Narration Scripts | 0/8 | Not started | - |
 
 ## Coverage
