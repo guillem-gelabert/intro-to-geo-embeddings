@@ -1,0 +1,34 @@
+<!--
+Reusable attribution/license slide. Verbatim strings sourced from
+data/DATA_CARD.md "Licenses and Attribution" table -- do not paraphrase.
+
+Toolchain note (07-01): Marp is in use, not Quarto. Each deck copy-pastes
+this slide verbatim, trimming only the rows irrelevant to that module's
+data sources -- never rewording a kept row. See slides/_partials/README.md.
+-->
+
+---
+
+# Attribution and Licenses
+
+- **AlphaEarth / Satellite Embedding** (CC BY 4.0): The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.
+- **ESA WorldCover 2021 v200** (CC BY 4.0): © ESA WorldCover project 2021
+  / Contains modified Copernicus Sentinel data (2021) processed by ESA
+  WorldCover consortium (citation: Zanaga et al. 2022,
+  https://doi.org/10.5281/zenodo.7254221)
+- **Copernicus HRL Imperviousness Density 2018** (Free/open, commercial
+  use allowed): Generated using European Union's Copernicus Land
+  Monitoring Service information
+- **Sentinel-2 L2A (derived reflectance bands)** (EU legal notice, Reg.
+  1159/2013): Contains modified Copernicus Sentinel data [Year] (the
+  actual year is recorded per-table in that table's own
+  `course_provenance`)
+- **LGND Clay v1.5 Sentinel-2 L2A (fixture)** (CC BY 4.0): LGND Clay v1.5
+  Sentinel-2 L2A embeddings, Source Cooperative, CC BY 4.0
+
+<!--
+Speaker notes: Every quantitative and visual claim in this deck traces
+back to one of these five licensed sources via data/DATA_CARD.md. Trim
+rows here only for sources this specific module does not touch -- never
+reword a row you keep.
+-->

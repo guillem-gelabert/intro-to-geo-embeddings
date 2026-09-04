@@ -1,0 +1,27 @@
+<!--
+Reusable version-banner slide.
+
+Toolchain note (07-01): Marp is in use, not Quarto (see slides/_metadata.yml
+for why). Marp has no `{{< include >}}` mechanism, so each deck copy-pastes
+this slide's Markdown body verbatim into its own deck file rather than
+including this file directly. Kept as `.qmd` extension per the plan's
+`files_modified` list; content below is plain Marp-flavoured Markdown.
+-->
+
+---
+
+# Course Reference Environment
+
+- **Course reference environment: 2026-08 release**
+- AlphaEarth Foundations Satellite Embedding `DATASET_VERSION`: **1.1**
+- GeoTessera: `dataset_version="v1.1", dataset_variant="cambridge"`
+
+<!--
+Speaker notes: We pin dataset and library versions because this field
+moves fast enough that unpinned material rots. AlphaEarth's own
+DATASET_VERSION and GeoTessera's dataset_version/variant are recorded
+here so a student re-running these notebooks a year from now gets the
+exact same embeddings we used to build every figure and label in this
+course, not a newer revision. If a source dataset is later updated, this
+course does not silently follow it.
+-->

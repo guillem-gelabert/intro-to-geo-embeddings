@@ -14,7 +14,13 @@ KERNEL_NAME := geo-embeddings-course
 # Defaults to notebooks/solutions, which does not exist yet in this repo (Phase 3).
 NOTEBOOKS_DIR ?= notebooks/solutions
 
-.PHONY: env kernel test test-network execute-notebooks exercises
+.PHONY: env kernel test test-network execute-notebooks exercises slides slides-pdf
+
+# Marp CLI is the slide toolchain (07-01): `brew install --cask quarto`'s
+# .pkg installer requires interactive sudo on this machine, so Quarto is
+# unavailable. Marp is invoked on demand via npx, pinned to 4.5.0 (never
+# @latest -- see 07-01-PLAN.md threat model T-07-01).
+MARP := npx --yes @marp-team/marp-cli@4.5.0
 
 # Solution-notebook stems the exercise generator loops over (Phase 6).
 EXERCISE_STEMS := 00_embedding_refresher 00b_representation_inspection \
@@ -71,6 +77,46 @@ exercises:
 			notebooks/solutions/$$stem.ipynb notebooks/exercises/$$stem.ipynb \
 			--appendix tools/exercise_appendix.yaml; \
 		uv run jupytext --set-formats ipynb,py:percent notebooks/exercises/$$stem.ipynb; \
+	done
+
+# Renders every module deck (slides/NN_*.md) to self-contained HTML via
+# Marp CLI, skipping the shared slides/_partials/ reference files (those
+# are copy-pasted into decks, not rendered standalone; see
+# slides/_partials/README.md for why Marp has no include mechanism).
+slides:
+	@shopt -s nullglob; \
+	files=(); \
+	for f in slides/*.md; do \
+		files+=("$$f"); \
+	done; \
+	if [ $${#files[@]} -eq 0 ]; then \
+		echo "No decks found yet under slides/ (expected before 07-02)."; \
+		exit 0; \
+	fi; \
+	set -euo pipefail; \
+	for f in "$${files[@]}"; do \
+		echo "Rendering $$f"; \
+		$(MARP) --theme slides/custom.scss --html "$$f"; \
+	done
+
+# Renders every module deck straight to PDF via Marp's own --pdf flag
+# (no decktape needed -- Marp is not Quarto's browser-print workflow).
+slides-pdf:
+	@shopt -s nullglob; \
+	mkdir -p slides/pdf; \
+	files=(); \
+	for f in slides/*.md; do \
+		files+=("$$f"); \
+	done; \
+	if [ $${#files[@]} -eq 0 ]; then \
+		echo "No decks found yet under slides/ (expected before 07-02)."; \
+		exit 0; \
+	fi; \
+	set -euo pipefail; \
+	for f in "$${files[@]}"; do \
+		stem="$$(basename "$$f" .md)"; \
+		echo "Rendering slides/pdf/$$stem.pdf"; \
+		$(MARP) --theme slides/custom.scss --pdf --allow-local-files -o "slides/pdf/$$stem.pdf" "$$f"; \
 	done
 
 # Generated, pinned, no-dev, no-hash Colab reference requirements file. Never
