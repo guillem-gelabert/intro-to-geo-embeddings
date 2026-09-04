@@ -209,9 +209,9 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — notebook 03: transition matrix, artificialization mask, spatiotemporal CV, provenance, wrap-up
-- [ ] 05-05-PLAN.md — notebook 04: Clay section, LGND-guarded section, Clay-encoder pointer, OlmoEarth markdown, provenance, wrap-up
-- [ ] 05-07-PLAN.md — notebook 05: prediction map, uncertainty, provenance, rubric self-check, wrap-up
+- [x] 05-03-PLAN.md — notebook 03: transition matrix, artificialization mask, spatiotemporal CV, provenance, wrap-up
+- [x] 05-05-PLAN.md — notebook 04: Clay section, LGND-guarded section, Clay-encoder pointer, OlmoEarth markdown, provenance, wrap-up
+- [x] 05-07-PLAN.md — notebook 05: prediction map, uncertainty, provenance, rubric self-check, wrap-up
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -276,7 +276,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
-| 5. Later Module Solution Notebooks | 5/9 | In Progress|  |
+| 5. Later Module Solution Notebooks | 8/9 | In Progress|  |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
 | 7. Slide Decks | 0/TBD | Not started | - |
 | 8. Narration Scripts | 0/TBD | Not started | - |
