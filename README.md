@@ -26,26 +26,26 @@ make test
 make execute-notebooks
 ```
 
-`make execute-notebooks` headlessly executes every solution notebook under `notebooks/solutions/`, currently `02_similarity_and_classification.ipynb`.
+`make execute-notebooks` headlessly executes every solution notebook under `notebooks/solutions/`: `00_embedding_refresher.ipynb`, `00b_representation_inspection.ipynb`, `01_alphaearth_access_visualize.ipynb`, and `02_similarity_and_classification.ipynb`.
 
 ## Notebooks
 
 | Notebook | Colab | Description |
 |----------|-------|--------------|
+| [`00_embedding_refresher.ipynb`](notebooks/solutions/00_embedding_refresher.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/guillem-gelabert/intro-to-geo-embeddings/blob/main/notebooks/solutions/00_embedding_refresher.ipynb) | Optional 25-minute refresher: NumPy vectors, cosine similarity, PCA, a tiny classifier, and CRS reprojection -- all on toy data, no network needed. |
+| [`00b_representation_inspection.ipynb`](notebooks/solutions/00b_representation_inspection.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/guillem-gelabert/intro-to-geo-embeddings/blob/main/notebooks/solutions/00b_representation_inspection.ipynb) | Compares an AlphaEarth pixel vector, a real Clay patch embedding, and (optionally, with torch) a SatCLIP location embedding for the same area. |
+| [`01_alphaearth_access_visualize.ipynb`](notebooks/solutions/01_alphaearth_access_visualize.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/guillem-gelabert/intro-to-geo-embeddings/blob/main/notebooks/solutions/01_alphaearth_access_visualize.ipynb) | Accesses and visualizes AlphaEarth via live Earth Engine (Path A, optional, not executed in CI) or a bundled clipped raster (Path B, no credentials). |
 | [`02_similarity_and_classification.ipynb`](notebooks/solutions/02_similarity_and_classification.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/guillem-gelabert/intro-to-geo-embeddings/blob/main/notebooks/solutions/02_similarity_and_classification.ipynb) | Similarity search and prototype queries over frozen AlphaEarth embeddings, a land-cover classifier, and the honest spatial-CV vs. random-split comparison (with a raw-Sentinel-2 baseline) -- no Earth Engine account needed. |
 
-<!--
-Colab badge URL template (used once notebooks exist):
-https://colab.research.google.com/github/ORG/REPO/blob/main/notebooks/solutions/NAME.ipynb
--->
-
-Each future phase appends its own row here as its solution notebook ships. This table does not populate automatically.
+Each future phase appends its own row here as its solution notebook ships. This table does not populate automatically. The Colab badges above link to a `main` branch that has not yet been pushed to a public remote -- the badge URL format is correct, but the Colab path itself has not been run and verified (see STATE.md for the open Colab timing checkpoint).
 
 ## Data sources and licenses
 
 **AlphaEarth (Google Satellite Embedding).** License: CC BY 4.0. Attribution: "The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind."
 
-Additional per-source license entries (TESSERA, Clay, LGND, Copernicus, and others) land alongside their datasets starting in Phase 2.
+**LGND Clay v1.5 Sentinel-2 L2A.** License: CC BY 4.0. Attribution: "LGND Clay v1.5 Sentinel-2 L2A embeddings, Source Cooperative, CC BY 4.0."
+
+Additional per-source license entries (TESSERA, Copernicus, and others) land alongside their datasets starting in later phases. See `data/DATA_CARD.md` for the full, per-artifact license and attribution table.
 
 ## Extras
 
