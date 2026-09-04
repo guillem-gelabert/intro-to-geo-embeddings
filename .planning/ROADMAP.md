@@ -230,7 +230,20 @@ Plans:
   4. Student takes an ungraded 5-question diagnostic after the refresher and a 5–8 question conceptual-error multiple-choice quiz per module in which each option's explanation quotes the notebook cell demonstrating the answer.
   5. Student reads assignment texts for the similarity/classification, change-detection and ecosystems modules matching the published weights (15%, 20%, 20%, 10% portability), and the capstone rubric (validation design 30%, reproducibility/provenance 15%, CRS/alignment 15%, interpretation/uncertainty 15%, representation choice 15%, licensing/ethics 10%) alongside a proposal template.
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — exercise-notebook generator (tools/derive_exercise.py) with unit tests, tag vocabulary
+- [ ] 06-02-PLAN.md — tag learning cells + appendix content: 00_embedding_refresher, 00b_representation_inspection, 01_alphaearth_access_visualize, 02_similarity_and_classification
+- [ ] 06-03-PLAN.md — tag learning cells + appendix content: 03_change_detection_and_validation, 04_embedding_ecosystems, 05_capstone_artificialization
+- [ ] 06-04-PLAN.md — refresher diagnostic + quizzes for 00b, 01, 02
+- [ ] 06-05-PLAN.md — quizzes for 03, 04; assignments for 02, 03, 04; capstone rubric + proposal template
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 06-06-PLAN.md — solution-link mechanism, generate all 7 exercise notebooks, regeneration + stub-boundary tests
 
 **Rationale for grouping assessments here:** quizzes and exercise checkpoints are the same layer — the learner's self-verification — and both are derived from a frozen solution notebook by quoting the exact cell that proves the point. Building them together keeps each module's practice-and-check bundle consistent, and it puts the quizzes on disk before Phase 8, where SCRIPT-05 requires every narration script to reference its module's exercise tasks and quiz.
 
@@ -277,7 +290,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
-| 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
+| 6. Exercise Notebooks and Assessments | 0/6 | Not started | - |
 | 7. Slide Decks | 0/TBD | Not started | - |
 | 8. Narration Scripts | 0/TBD | Not started | - |
 
