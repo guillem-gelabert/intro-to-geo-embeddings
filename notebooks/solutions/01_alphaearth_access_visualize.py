@@ -338,3 +338,42 @@ plt.show()
 # separates those same two areas from each other in this sample as the
 # pseudo-RGB composite does visually -- two different views of the same
 # underlying structure, neither of which names what the axes "are".
+
+# %% [markdown]
+# ## Wrap-up
+#
+# **Takeaways:**
+#
+# - AlphaEarth ships 64-band embeddings as quantized int8; recovering a
+#   real vector requires `dequantize_aef`'s formula
+#   (`(v / 127.5) ** 2 * sign(v)`, then L2 renormalization) -- never
+#   average raw int8 values directly.
+# - Every valid pixel in the bundled clip dequantizes to a unit-norm
+#   vector, exactly like the point tables `02_similarity_and_classification.ipynb`
+#   uses -- that unit-norm property is what makes dot product equal
+#   cosine similarity there.
+# - A pseudo-RGB composite is always a DISPLAY STRETCH over three
+#   illustrative axes, never a physical reflectance range, and the axes
+#   themselves carry no RGB meaning.
+# - A PCA component separates landscape types observed *in this sample*
+#   -- it never "measures" or "is" a physical quantity, because it is a
+#   direction fit to one clip's data, not a labeled variable.
+# - Path B reaches every one of these conclusions with zero credentials,
+#   using only the checked-in `data/bern_aef_2024_clip.tif` -- proving
+#   the course's central promise that no notebook hard-depends on an
+#   Earth Engine account.
+#
+# **What's next:** `02_similarity_and_classification.ipynb` uses these
+# same dequantized, unit-norm AlphaEarth vectors (from frozen point
+# tables rather than a raster window) for similarity search,
+# classification, and spatially honest validation.
+#
+# **Resources:**
+#
+# - AlphaEarth GCS README: https://developers.google.com/earth-engine/guides/aef_on_gcs_readme
+# - AlphaEarth Earth Engine catalog entry: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL
+# - Dataset version: `1.1` (from `data/bern_aef_2024_clip.provenance.json`)
+# - License: CC BY 4.0
+# - Attribution: "The AlphaEarth Foundations Satellite Embedding dataset is
+#   produced by Google and Google DeepMind." (verbatim from
+#   `data/bern_aef_2024_clip.provenance.json`, reused, never retyped)
