@@ -120,7 +120,7 @@ Path("outputs").mkdir(exist_ok=True)
 # and it is the whole point of the leave-region-out split later in the
 # module.
 
-# %% tags=["solution"]
+# %%
 import course.data
 import course.schema
 from course.config import AREAS
@@ -185,15 +185,17 @@ QUERY_REGION = "bern"  # EDIT ME
 QUERY_ID = 150  # EDIT ME -- a "built" point in bern
 K = 10  # EDIT ME
 
-# %%
+# %% tags=["task"]
 gdf = bern if QUERY_REGION == "bern" else seville
 assert QUERY_ID in gdf.index, (
     f"QUERY_ID={QUERY_ID!r} is out of range for region {QUERY_REGION!r} "
     f"(valid range: 0..{gdf.index.max()})"
 )
+### BEGIN SOLUTION
 matrix = course.schema.to_matrix(gdf)
 query_vec = matrix[QUERY_ID]
 sims = cosine_similarity_map(query_vec, matrix)
+### END SOLUTION
 
 order = np.argsort(-sims)
 order = order[order != QUERY_ID][:K]
@@ -281,7 +283,7 @@ print(
 # with everything else in this notebook.
 
 
-# %%
+# %% tags=["task"]
 def precision_at_k(
     sims: np.ndarray,
     labels: np.ndarray,
@@ -308,7 +310,7 @@ print(f"single-pixel precision@{K} vs label {target_label!r}: {precision_single:
 # %% tags=["parameters"]
 POLYGON_ID = "bern-quarry-01"  # EDIT ME
 
-# %%
+# %% tags=["task"]
 import geopandas as gpd
 
 polygons = gpd.read_file("data/query_polygons.geojson")
@@ -328,9 +330,11 @@ assert polygon_region == QUERY_REGION, (
 epsg = AREAS[polygon_region]["epsg"]
 polygon_proj = selected.to_crs(epsg).geometry.iloc[0]
 points_proj = gdf.to_crs(epsg)
+### BEGIN SOLUTION
 buffered = polygon_proj.buffer(300)
 within_mask = points_proj.geometry.within(buffered).to_numpy()
 contributing = gdf.loc[within_mask]
+### END SOLUTION
 
 if len(contributing) < 3:
     print(
@@ -343,9 +347,11 @@ print(
     f"{len(contributing)} points contribute to the {POLYGON_ID} polygon-mean prototype"
 )
 
-# %%
+# %% tags=["task"]
+### BEGIN SOLUTION
 positive_centroid_raw = course.schema.to_matrix(contributing).mean(axis=0)
 positive_centroid = positive_centroid_raw / np.linalg.norm(positive_centroid_raw)
+### END SOLUTION
 
 sims_polygon = cosine_similarity_map(positive_centroid, matrix)
 precision_polygon = precision_at_k(
@@ -364,7 +370,7 @@ print(
 # class — sharpens the query toward what is distinctive about the positive
 # examples, not just present in them.
 
-# %%
+# %% tags=["task"]
 rng = np.random.default_rng(RANDOM_STATE)
 other_labels = [label for label in gdf["label"].unique() if label != target_label]
 negative_label = other_labels[0]
@@ -372,9 +378,11 @@ negative_pool = gdf.index[gdf["label"] == negative_label].to_numpy()
 n_negative = min(len(contributing), len(negative_pool))
 negative_idx = rng.choice(negative_pool, size=n_negative, replace=False)
 
+### BEGIN SOLUTION
 negative_centroid_raw = course.schema.to_matrix(gdf.loc[negative_idx]).mean(axis=0)
 pos_minus_neg_raw = positive_centroid - negative_centroid_raw
 pos_minus_neg = pos_minus_neg_raw / np.linalg.norm(pos_minus_neg_raw)
+### END SOLUTION
 
 sims_pos_neg = cosine_similarity_map(pos_minus_neg, matrix)
 precision_pos_neg = precision_at_k(
@@ -435,7 +443,7 @@ plt.show()
 # both regions: **built, crop, vegetation, water.** `bare` is dropped, and
 # that filtering is a deliberate, stated decision, not a silent one.
 
-# %% tags=["solution"]
+# %%
 CLASSES = ["built", "crop", "vegetation", "water"]
 bern_clf = bern.loc[bern["label"].isin(CLASSES)].reset_index(drop=True)
 seville_clf = seville.loc[seville["label"].isin(CLASSES)].reset_index(drop=True)
@@ -443,7 +451,7 @@ print(f"bern: {len(bern_clf)}/{len(bern)} rows kept after dropping 'bare'")
 print(f"seville: {len(seville_clf)}/{len(seville)} rows kept after dropping 'bare'")
 print(bern_clf["label"].value_counts())
 
-# %%
+# %% tags=["task"]
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -455,6 +463,7 @@ from sklearn.model_selection import GroupKFold, LeaveOneGroupOut, train_test_spl
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+### BEGIN SOLUTION
 MODELS = {
     "logreg": Pipeline(
         [
@@ -469,11 +478,12 @@ MODELS = {
         n_jobs=-1,
     ),
 }
+### END SOLUTION
 
 X_bern = course.schema.to_matrix(bern_clf)
 y_bern = bern_clf["label"].to_numpy()
 
-# %%
+# %% tags=["task"]
 X_train, X_test, y_train, y_test = train_test_split(
     X_bern, y_bern, test_size=0.3, random_state=RANDOM_STATE, stratify=y_bern
 )
@@ -514,12 +524,14 @@ plt.show()
 # notebook reprojects Bern to **EPSG:2056** (Swiss LV95, metre-based) as an
 # explicit, visible step *before* gridding — never the other way around.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from course.config import BLOCK_SIZE_M
 from course.validation import make_blocks, spatial_cv_report
 
+### BEGIN SOLUTION
 bern_2056 = bern_clf.to_crs("EPSG:2056")
 groups_block = make_blocks(bern_2056, block_size_m=BLOCK_SIZE_M)
+### END SOLUTION
 n_blocks = len(np.unique(groups_block))
 assert n_blocks >= 5, (
     f"only {n_blocks} spatial blocks at block_size_m={BLOCK_SIZE_M} — need at "
@@ -571,7 +583,7 @@ for name, model in MODELS.items():
 # interpolation one. The Sentinel-2 baseline in the next section tests this
 # hypothesis directly.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 combined = pd.concat([bern_clf, seville_clf], ignore_index=True)
 X_all = course.schema.to_matrix(combined)
 y_all = combined["label"].to_numpy()
@@ -631,7 +643,7 @@ fig.tight_layout()
 fig.savefig("figures/02_cv_comparison_bar_chart.png")
 plt.show()
 
-# %%
+# %% tags=["task"]
 rf_model = MODELS["random_forest"]
 lro_cv = LeaveOneGroupOut()
 # LeaveOneGroupOut yields one (train, test) split per unique group; pick the
@@ -704,7 +716,7 @@ plt.show()
 # raw single-date spectral bands, or not? The numbers below are measured,
 # not assumed either way.
 
-# %% tags=["solution"]
+# %%
 from course.schema import S2_COLS
 
 # A handful of points sit at the very edge of a Sentinel-2 scene and come
@@ -729,7 +741,7 @@ X_all_s2 = combined_s2[S2_COLS].to_numpy(np.float32)
 y_all_s2 = combined_s2["label"].to_numpy()
 region_groups_s2 = combined_s2["region"].to_numpy()
 
-# %%
+# %% tags=["task"]
 s2_models = {
     "logreg": Pipeline(
         [
@@ -825,7 +837,7 @@ print(
 # / `write_provenance` (`course/provenance.py`), never hand-typed. This is
 # the single source of truth for "what exactly did this run use."
 
-# %% tags=["solution"]
+# %%
 import json
 
 from course.provenance import build_provenance, write_provenance
