@@ -288,7 +288,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — narration script template + anchor/timing verifier tool (tools/verify_narration_scripts.py), TDD
+- [x] 08-01-PLAN.md — narration script template + anchor/timing verifier tool (tools/verify_narration_scripts.py), TDD
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -317,7 +317,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
 | 6. Exercise Notebooks and Assessments | 6/6 | Complete   | 2026-09-04 |
 | 7. Slide Decks | 5/5 | Complete   | 2026-09-04 |
-| 8. Narration Scripts | 0/8 | Not started | - |
+| 8. Narration Scripts | 1/8 | In Progress|  |
 
 ## Coverage
 
