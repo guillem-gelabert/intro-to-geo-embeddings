@@ -351,3 +351,186 @@ print(
 # *operations* run unchanged across all three — it does NOT mean the
 # numbers produced are interchangeable or that a similarity score from one
 # provider translates to another.
+
+# %% [markdown]
+# ## LGND: a managed similarity-search service
+#
+# So far every provider in this course hands you the raw vectors and you
+# implement the operation (cosine similarity, norm checks) yourself.
+# **LGND is a different shape of product**: a REST API where you express
+# the operation ("find similar patches near this point") and the service
+# holds the vector index and does the search — you never see the raw
+# 1024-D vectors it works with. There is no first-party LGND SDK (per
+# STACK.md); this section uses plain `requests` against LGND's published
+# OpenAPI reference, the same way any REST API would be called from
+# Python.
+#
+# LGND requires a bearer token (`LGND_TOKEN` in the environment; a trial
+# tier exists). This notebook never hard-depends on it: no token means no
+# live call, and the section still completes using a small, clearly
+# labeled recorded fixture. The exact endpoint path below reflects LGND's
+# documented base pattern as of this course's 2026-08 reference release —
+# confirm against the live OpenAPI spec before depending on it in your own
+# code, since third-party API shapes can change between course releases.
+
+# %% tags=["solution"]
+import requests
+
+LGND_TOKEN = os.environ.get("LGND_TOKEN")
+LGND_FIXTURE_PATH = Path("data/fixtures/lgnd_response.json")
+LGND_API_URL = "https://api.lgnd.ai/v1/search"  # confirm against the live OpenAPI spec
+
+
+def _load_lgnd_fixture() -> dict:
+    with LGND_FIXTURE_PATH.open() as f:
+        return json.load(f)
+
+
+lgnd_result = None
+if LGND_TOKEN:
+    try:
+        resp = requests.get(
+            LGND_API_URL,
+            headers={"Authorization": f"Bearer {LGND_TOKEN}"},
+            params={"lon": 7.4474, "lat": 46.9480, "k": 3},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        lgnd_result = resp.json()
+        lgnd_source = "live LGND API call"
+    except Exception as e:
+        print(f"LGND live call failed ({e}); using recorded fixture")
+else:
+    print("LGND_TOKEN not set; skipping live call, using recorded fixture")
+
+if lgnd_result is None:
+    lgnd_result = _load_lgnd_fixture()
+    lgnd_source = f"recorded fixture ({lgnd_result['fixture_type']})"
+
+print(f"LGND result source: {lgnd_source!r}")
+print(f"LGND results (top {len(lgnd_result['results'])}):")
+for r in lgnd_result["results"]:
+    print(f"  {r['stac_item_id']}: score={r['score']:.3f}")
+
+# %% [markdown]
+# **Takeaway:** notice the API shape difference from every other provider
+# in this notebook — LGND returns ranked `stac_item_id`/`score` pairs, not
+# a matrix you feed into `cosine_similarity_map` yourself. That trade —
+# less code, but no access to the underlying vectors or control over the
+# similarity metric — is the practical meaning of "managed service" versus
+# "you hold the vectors."
+
+# %% [markdown]
+# ## Optional: the Local Clay Encoder
+#
+# Everything above reads *pre-computed* Clay embeddings. If you want to
+# encode a Sentinel-2 scene into a Clay embedding yourself, that requires
+# running the Clay v1.5 model checkpoint locally with `torch` — a GPU-
+# friendly, dependency-heavy workload deliberately kept OUT of this
+# notebook's environment. STACK.md documents an isolated `envs/clay/` uv
+# project for this: a separate `pyproject.toml` with `claymodel` (the
+# `Clay-foundation/model` git dependency), `torch>=2.4`, and the pinned
+# `clay-v1.5.ckpt` checkpoint URL. Run it there, or on a Colab GPU runtime
+# — never in this notebook's own environment, which never imports `torch`.
+# This keeps the core course environment installable on any machine,
+# regardless of GPU availability, and avoids torch's large dependency
+# footprint for students who only ever consume pre-computed embeddings.
+
+# %% [markdown]
+# ## OlmoEarth: custom temporal windows vs annual fields
+#
+# AlphaEarth publishes one embedding per year — a fixed annual composite.
+# OlmoEarth's differentiator is **configurable temporal windows and
+# resolutions**: instead of a single annual field, you request an
+# embedding for the date range and resolution your task actually needs
+# (a month, a season, a custom window), rather than being locked into
+# whatever composite period the provider chose. That flexibility is a real
+# trade-off, not a strict improvement — a custom-window query is a request
+# you must construct and validate yourself, versus AlphaEarth's single,
+# already-validated annual product.
+#
+# OlmoEarth has no public API exercised elsewhere in this course, so this
+# comparison is markdown only — no live call, no fixture, no code cell.
+
+# %% [markdown]
+# ## Provenance
+#
+# TESSERA, Clay, and LGND lack a frozen-table `course_provenance` attrs
+# dict the way the AlphaEarth tables from `course.data.load` do, so this
+# notebook hand-builds its provenance dict rather than forcing these three
+# providers through `build_provenance` (which requires that attrs key and
+# would raise `KeyError` here). `write_provenance` only needs any
+# JSON-serializable dict, so this hand-built structure is still written
+# through it.
+
+# %% tags=["solution"]
+from datetime import UTC, datetime
+
+from course.provenance import write_provenance
+
+provider_provenance = {
+    "tessera": {
+        "dataset_version": "v1.1",
+        "dataset_variant": "cambridge",
+        "source": tessera_source,
+        "license": (
+            "MIT (software); embedding-data license unstated in docs/README "
+            "as of this course's 2026-08 reference release (STACK.md gap)"
+        ),
+        "attribution": "TESSERA, served via geotessera / Source Cooperative",
+    },
+    "clay": {
+        "embedding_product": "lgnd-clay-v1-5-sentinel-2-l2a",
+        "partition": "geohash_l2=u0/year=2025/month=06",
+        "source": clay_source,
+        "license": "CC BY 4.0",
+        "attribution": (
+            "LGND Clay v1.5 Sentinel-2 L2A embeddings, Source Cooperative, CC BY 4.0"
+        ),
+    },
+    "lgnd": {
+        "api": "LGND REST similarity search (no first-party SDK)",
+        "source": lgnd_source,
+        "license": (
+            "LGND open Clay corpus is CC BY 4.0; the commercial LGND API "
+            "carries separate terms -- confirm the license that applies to "
+            "your specific use before redistributing API results"
+        ),
+    },
+}
+
+notebook_provenance = {
+    "created_by": "04_embedding_ecosystems.ipynb",
+    "generated_at": datetime.now(UTC).isoformat(),
+    "providers": provider_provenance,
+}
+write_provenance(notebook_provenance, Path("outputs/provenance_04.json"))
+print("wrote outputs/provenance_04.json")
+
+# %% [markdown]
+# ## Wrap-up
+#
+# **Takeaways:**
+#
+# - The same `cosine_similarity_map`/`norm_diagnostics` operations from
+#   `course.embeddings` ran unchanged against AlphaEarth (64-D), TESSERA
+#   (128-D), and Clay (1024-D) vectors — provider portability is about the
+#   operation, not the numbers, which are NOT comparable across providers.
+# - A managed service like LGND trades vector access for a simpler,
+#   already-implemented similarity operation — a different point on the
+#   same spectrum, not a strictly better or worse one.
+# - Every provider's license differs and must be checked per artifact:
+#   AlphaEarth CC BY 4.0, TESSERA software MIT / data license unstated,
+#   Clay corpus CC BY 4.0, LGND API terms separate from the open corpus.
+#
+# **What's next:** the capstone notebook reuses these same
+# `course.embeddings` helpers — `cosine_similarity_map`, `norm_diagnostics`,
+# `change_score` — end to end on a full artificialization workflow.
+#
+# **Resources:**
+#
+# - TESSERA docs: https://geotessera.readthedocs.io
+# - LGND Clay corpus: https://source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a
+# - Clay model: https://clay-foundation.github.io/model/
+# - OlmoEarth: consult its own documentation for current API/access status
+#   (no public API exercised in this course as of the 2026-08 release)
