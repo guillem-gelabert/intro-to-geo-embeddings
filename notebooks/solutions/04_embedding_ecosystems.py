@@ -260,3 +260,94 @@ print(ranked)
 # vectors here — it never hardcodes an embedding width and never assumes
 # unit norm, so provider portability comes for free from the helper's own
 # design, not from any TESSERA-specific code in this notebook.
+
+# %% [markdown]
+# ## Clay: a 1024-D patch embedding from the open LGND corpus
+#
+# The [LGND open Clay corpus](https://source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a)
+# (`lgnd-clay-v1-5-sentinel-2-l2a`) publishes 1024-dimensional Clay v1.5
+# Sentinel-2 L2A patch embeddings as **CC BY 4.0** hive-partitioned
+# GeoParquet, queryable directly with DuckDB's `spatial` and `httpfs`
+# extensions over plain **HTTPS** — never `s3://`: the bucket's dotted
+# name breaks TLS with virtual-hosted-style S3 URLs. Bern's partition is
+# `geohash_l2=u0`.
+#
+# This is a *different* product from TESSERA above (1024-D vs 128-D) and
+# from AlphaEarth (64-D) — none of these vector spaces are directly
+# comparable to one another without a shared projection. What transfers
+# across all three is the *operation* (`cosine_similarity_map`,
+# `norm_diagnostics`), not the numbers.
+
+# %% tags=["solution"]
+CLAY_FIXTURE_PATH = Path("data/fixtures/clay_bern_sample.json")
+CLAY_PARQUET_URL = (
+    "https://data.source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a/aggregated/"
+    "geohash_l2=u0/year=2025/month=06/*.parquet"
+)
+
+clay_vectors = None
+clay_source = None
+
+if HAS_DUCKDB:
+    try:
+        duckdb.sql("INSTALL httpfs; LOAD httpfs; INSTALL spatial; LOAD spatial;")
+        clay_df = duckdb.sql(
+            f"SELECT * FROM read_parquet('{CLAY_PARQUET_URL}') LIMIT 5"
+        ).df()
+        clay_vectors = np.asarray(clay_df["embedding"].tolist(), dtype=np.float32)
+        clay_source = "live DuckDB HTTPS read"
+    except Exception as e:
+        print(f"live Clay corpus fetch failed ({e}); using bundled fixture")
+else:
+    print("duckdb is not installed; using bundled fixture")
+
+if clay_vectors is None:
+    with CLAY_FIXTURE_PATH.open() as f:
+        clay_fixture = json.load(f)
+    clay_fixture_vec = np.asarray(clay_fixture["embedding"], dtype=np.float32)
+    # This fixture is a single recorded row (see fixture_type/source below,
+    # both printed so nobody mistakes this for five independent live
+    # points); repeat it to satisfy "an operation across the corpus's own
+    # rows" without pretending the repeats are distinct observations.
+    clay_vectors = np.tile(clay_fixture_vec, (5, 1))
+    clay_source = f"bundled fixture ({clay_fixture['fixture_type']}, {clay_fixture['source']})"
+
+print(f"Clay vectors: shape={clay_vectors.shape}, source={clay_source!r}")
+
+# %% tags=["checkpoint"]
+clay_diag = norm_diagnostics(clay_vectors)
+print("Clay norm diagnostics:", clay_diag)
+if not (0.9 < clay_diag["mean"] < 1.1):
+    print(
+        "WARNING: Clay vectors are not close to unit norm here -- as with "
+        "TESSERA, this is a report, not a hard assertion. Clay's norm "
+        "property is a separate fact from AlphaEarth's and TESSERA's; check "
+        "it, don't assume it, every time you adopt a new provider."
+    )
+else:
+    print(
+        "Clay vectors are close to unit norm in this sample -- consistent "
+        "with, but not proof of, a general unit-norm guarantee."
+    )
+
+# %% tags=["solution"]
+clay_query = clay_vectors[0]
+clay_sims = cosine_similarity_map(clay_query, clay_vectors)
+clay_top_sim = float(np.sort(clay_sims)[-2])
+print(
+    f"Clay section observed: n={clay_diag['n']} rows, "
+    f"norm mean={clay_diag['mean']:.3f}, "
+    f"top similarity (excl. self)={clay_top_sim:.3f}"
+)
+
+# %% [markdown]
+# **Takeaway:** the numbers printed above (n rows, norm mean, top
+# similarity) are this run's actual output, not a hardcoded guess.
+#
+# Clay's 1024-D vectors and TESSERA's 128-D vectors are NOT directly
+# comparable to AlphaEarth's 64-D vectors, nor to each other, without a
+# shared projection trained for that purpose. "Provider portability" in
+# this course means the same `cosine_similarity_map`/`norm_diagnostics`
+# *operations* run unchanged across all three — it does NOT mean the
+# numbers produced are interchangeable or that a similarity score from one
+# provider translates to another.
