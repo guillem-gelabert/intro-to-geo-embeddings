@@ -39,3 +39,8 @@ dist/
 
 # Headless-run artifacts from `make execute-notebooks` (nbclient --output)
 notebooks/**/executed_*.ipynb
+
+# Rendered slide-deck build output (`make slides` / `make slides-pdf`);
+# sources are the tracked slides/*.md files, HTML/PDF are regenerable.
+slides/*.html
+slides/*.pdf
