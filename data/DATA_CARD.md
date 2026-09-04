@@ -19,6 +19,7 @@ as part of the course under the licenses below.
 | ESA WorldCover 2021 v200 | CC BY 4.0 | © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium (citation: Zanaga et al. 2022, https://doi.org/10.5281/zenodo.7254221) |
 | Copernicus HRL Imperviousness Density 2018 | Free/open, commercial use allowed | Generated using European Union's Copernicus Land Monitoring Service information |
 | Sentinel-2 L2A (derived reflectance bands) | EU legal notice (Reg. 1159/2013) | Contains modified Copernicus Sentinel data [Year] (the actual year is recorded per-table in that table's own `course_provenance`) |
+| LGND Clay v1.5 Sentinel-2 L2A (fixture) | CC BY 4.0 | LGND Clay v1.5 Sentinel-2 L2A embeddings, Source Cooperative, CC BY 4.0 |
 
 **Copernicus Global Embeddings (CDSE) are never bundled** in this
 dataset -- CDSE's portal terms prohibit redistribution of portal
@@ -78,6 +79,29 @@ their exact attribution strings, plus:
 
 > Introduction to Geospatial Embeddings course, frozen teaching dataset,
 > course release 2026.08.
+
+## Phase 4 additions
+
+`data/clay_sample_fixture.parquet` is a 5-row fixture drawn from the LGND
+Clay v1.5 Sentinel-2 L2A open corpus (`embedding` `list<float32>[1024]`),
+sampled via `ST_Intersects` around Bern city center (7.4474, 46.948) from
+`https://data.source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a/aggregated/geohash_l2=u0/year=2025/month=06/...parquet`.
+License CC BY 4.0; attribution "LGND Clay v1.5 Sentinel-2 L2A embeddings,
+Source Cooperative, CC BY 4.0" (see the table row above). It exists so
+`00b_representation_inspection.ipynb` can compare a real Clay patch
+embedding against an AlphaEarth pixel vector without a live network call.
+
+`data/bern_aef_2024_clip.tif` is a small (2 MB) windowed clip of the same
+AlphaEarth / Satellite Embedding product documented in the table above
+(same product, license, and attribution -- CC BY 4.0, "The AlphaEarth
+Foundations Satellite Embedding dataset is produced by Google and Google
+DeepMind." -- this is a raster clip of that dataset, not a separate
+source). It covers bbox `[7.44, 46.94, 7.46, 46.96]` (EPSG:4326) for year
+2024, shape `(64, 225, 157)` in CRS EPSG:32632. Unlike the point tables
+above, it ships as **raw, un-dequantized int8** deliberately, so
+`01_alphaearth_access_visualize.ipynb` can teach the
+`((v / 127.5) ** 2) * sign(v)` dequantization formula on real data rather
+than starting from an already-processed vector.
 
 ## Provenance
 
