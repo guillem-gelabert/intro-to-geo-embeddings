@@ -112,7 +112,7 @@ Path("figures").mkdir(exist_ok=True)
 # for that idea: six 8-dimensional vectors, three drawn tightly around one
 # center and three around another.
 
-# %% tags=["solution"]
+# %%
 rng = np.random.default_rng(RANDOM_STATE)
 cluster_a_center = rng.normal(loc=0.0, scale=1.0, size=8)
 cluster_b_center = cluster_a_center + 4.0
@@ -128,7 +128,7 @@ cluster_labels = np.array(["A", "A", "A", "B", "B", "B"])
 raw_norms = np.linalg.norm(toy_matrix, axis=1)
 print("raw (non-unit) norms:", np.round(raw_norms, 3))
 
-# %%
+# %% tags=["task"]
 normalized = toy_matrix / np.linalg.norm(toy_matrix, axis=1, keepdims=True)
 unit_norms = np.linalg.norm(normalized, axis=1)
 print("norms after L2 normalization:", np.round(unit_norms, 6))
@@ -175,7 +175,7 @@ plt.show()
 # PCA finds the 2 directions of greatest variance in the toy matrix so it
 # can be visualized on a page, at the cost of discarding everything else.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from sklearn.decomposition import PCA
 
 pca = PCA(n_components=2, random_state=RANDOM_STATE)
@@ -207,7 +207,7 @@ plt.show()
 # natural question is whether a simple linear model can recover the
 # clusters from the vectors alone.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
@@ -238,7 +238,7 @@ print(f"test-set accuracy: {accuracy:.2f}")
 # distances. Three tiny points near Bern, reused from the same study area
 # `02_similarity_and_classification.ipynb` uses, make this concrete.
 
-# %% tags=["solution"]
+# %% tags=["task"]
 import geopandas as gpd
 from shapely.geometry import Point
 
