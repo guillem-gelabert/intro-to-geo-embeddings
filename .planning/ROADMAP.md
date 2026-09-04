@@ -292,12 +292,12 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — Module 00 refresher + Module 01 foundations scripts (60 min)
-- [ ] 08-03-PLAN.md — Module 02 access/visualize script (50 min)
-- [ ] 08-04-PLAN.md — Module 03 similarity/classification script (65 min, flagship)
-- [ ] 08-05-PLAN.md — Module 04 change detection script (60 min)
-- [ ] 08-06-PLAN.md — Module 05 ecosystems script (55 min)
-- [ ] 08-07-PLAN.md — Module 06 production/provenance + Module 07 capstone scripts (70 min)
+- [x] 08-02-PLAN.md — Module 00 refresher + Module 01 foundations scripts (60 min)
+- [x] 08-03-PLAN.md — Module 02 access/visualize script (50 min)
+- [x] 08-04-PLAN.md — Module 03 similarity/classification script (65 min, flagship)
+- [x] 08-05-PLAN.md — Module 04 change detection script (60 min)
+- [x] 08-06-PLAN.md — Module 05 ecosystems script (55 min)
+- [x] 08-07-PLAN.md — Module 06 production/provenance + Module 07 capstone scripts (70 min)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -317,7 +317,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
 | 6. Exercise Notebooks and Assessments | 6/6 | Complete   | 2026-09-04 |
 | 7. Slide Decks | 5/5 | Complete   | 2026-09-04 |
-| 8. Narration Scripts | 1/8 | In Progress|  |
+| 8. Narration Scripts | 7/8 | In Progress|  |
 
 ## Coverage
 
