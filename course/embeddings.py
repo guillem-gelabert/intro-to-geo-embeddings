@@ -76,3 +76,61 @@ def cosine_similarity_map(query: np.ndarray, matrix: np.ndarray) -> np.ndarray:
     dot = np.einsum("d,nd->n", query, matrix)
     denom = np.linalg.norm(query) * np.linalg.norm(matrix, axis=1) + 1e-9
     return (dot / denom).astype(np.float32)
+
+
+def change_score(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Paired, row-aligned change score: `1 - cosine_similarity` per row.
+
+    `a` and `b` both have shape `(n, d)`, band-last (the same orientation
+    `cosine_similarity_map`'s `matrix` argument uses). Row `i` of `a` is
+    compared only against row `i` of `b` — this is the "same point, two
+    years" counterpart to `cosine_similarity_map`'s query-vs-matrix
+    broadcast, and is a distinct einsum contraction (do not build it by
+    looping `cosine_similarity_map` per row).
+
+    Like `cosine_similarity_map`, this does not assume its inputs are
+    already unit-norm.
+
+    IMPORTANT (teaching point): a large change score means the embedding
+    representation moved between the two inputs. It is NOT, by itself,
+    evidence of a semantic land-cover transition — the same score can be
+    produced by phenology (seasonal vegetation change), a different
+    observation mix feeding the embedding model, sensor/atmospheric
+    artifacts, or genuine land-cover change. This function reports
+    representation movement only; interpreting *why* it moved is the
+    notebook's job, not this helper's.
+    """
+    if a.shape != b.shape:
+        raise ValueError(
+            f"change_score requires row-aligned matrices of identical shape: "
+            f"a {a.shape}, b {b.shape}"
+        )
+    dot = np.einsum("nd,nd->n", a, b)
+    denom = np.linalg.norm(a, axis=1) * np.linalg.norm(b, axis=1) + 1e-9
+    return (1.0 - dot / denom).astype(np.float32)
+
+
+def norm_diagnostics(matrix: np.ndarray) -> dict:
+    """Report (never assert) vector-norm statistics for `matrix`.
+
+    `matrix` has shape `(n, d)`, band-last. Returns a dict with keys
+    `mean`, `std`, `min`, `max` (plain Python `float`) and `n` (plain
+    Python `int`, so the result JSON-serializes cleanly for a
+    provenance/diagnostics cell without a custom encoder).
+
+    This function never raises and never assumes or enforces unit norm.
+    AlphaEarth's dequantized vectors happen to be unit-norm; TESSERA's
+    128-D vectors' unit-norm property is undocumented upstream, and
+    Clay's differs again — each provider must be *checked*, not assumed.
+    Callers decide their own `assert abs(diagnostics["mean"] - 1.0) <
+    atol` with a provider-appropriate tolerance in the notebook itself;
+    this helper only reports.
+    """
+    norms = np.linalg.norm(matrix, axis=1)
+    return {
+        "mean": float(norms.mean()),
+        "std": float(norms.std()),
+        "min": float(norms.min()),
+        "max": float(norms.max()),
+        "n": int(matrix.shape[0]),
+    }
