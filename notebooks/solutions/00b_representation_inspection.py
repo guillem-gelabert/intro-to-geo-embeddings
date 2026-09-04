@@ -187,3 +187,61 @@ print(comparison)
 # before combining or comparing embeddings from different providers —
 # Module 5 revisits this with TESSERA and OlmoEarth.
 
+# %% [markdown]
+# ## Optional: SatCLIP location embedding
+#
+# SatCLIP produces a **location** embedding: it is derived from
+# coordinates alone (lon/lat, sometimes with metadata like a target
+# resolution), with no observation date at all. It knows nothing about
+# what happened at a place this year — that is the tradeoff for needing
+# no imagery to query it. SatCLIP requires `torch`, which is
+# intentionally kept out of this course's core/providers install
+# (ENV-05), so this section degrades gracefully when torch is absent.
+
+# %%
+try:
+    import torch  # noqa: F401
+
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+if not TORCH_AVAILABLE:
+    print(
+        "torch is not installed in this environment — skipping the SatCLIP "
+        "section. SatCLIP location embeddings are optional per EARLY-02; "
+        "see the isolated envs/clay/ environment referenced in the "
+        "technology-stack docs for a torch-enabled walkthrough."
+    )
+else:
+    # This branch is illustrative only: no bundled SatCLIP weights ship
+    # with this course, so a real forward pass is out of scope here. It
+    # is not expected to execute in the reference environment (torch is
+    # absent by default) and does not need a real model checkpoint.
+    satclip_vector = np.zeros(256, dtype="float32")  # placeholder shape only
+    print(
+        "torch is installed — SatCLIP location embeddings are typically a "
+        "few hundred dimensions; placeholder shape:",
+        satclip_vector.shape,
+    )
+
+# %% [markdown]
+# ## Wrap-up
+#
+# - The AlphaEarth vector is a single point in a 64-D space describing
+#   one 10 m pixel for one calendar year, with no independently
+#   interpretable axis.
+# - A Clay patch embedding covers a much larger area and a single scene —
+#   "the same location" means something different for a pixel vector
+#   than for a patch embedding.
+# - Shape and spatial unit are the first two things to check before
+#   combining or comparing embeddings from different providers.
+#
+# **What's next:** `01_alphaearth_access_visualize.ipynb` goes deeper on
+# the AlphaEarth pixel embedding alone.
+#
+# **Resources:**
+# - AlphaEarth catalog: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL
+# - LGND / Clay v1.5 Sentinel-2 L2A corpus (Source Cooperative, CC BY 4.0): https://source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a
+# - SatCLIP paper and repo: https://github.com/microsoft/satclip
+
