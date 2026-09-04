@@ -15,11 +15,29 @@
   reflection: []
   stretch: []
 03_change_detection_and_validation:
-  reflection: []
-  stretch: []
+  reflection:
+    - "The WRONG-conclusion cell used a fixed threshold of 0.25 -- what does the calibrated threshold from precision_recall_curve turn out to be, and why does the fixed guess fail?"
+    - "The transition-matrix axes are labeled 'predicted,' never 'true' -- what would it mean, and why would it be wrong, to read this matrix as an observed 2018-vs-2021 ground-truth transition?"
+    - "The pooled 2018+2021 table groups by year for LeaveOneGroupOut CV instead of by spatial block -- what specific kind of leakage does grouping by year prevent that spatial-block grouping alone would miss?"
+  stretch:
+    - "Recompute the transition matrix using StratifiedGroupKFold instead of GroupKFold and compare balanced_accuracy."
+    - "Swap the proxy known_change/known_unchanged definition for a stricter one (e.g. tighten the imd_2018 thresholds) and see how much the calibrated threshold shifts."
+    - "Fold crop-to-built into the artificialized mask unconditionally (remove the 20% relative-size guard) and compare the spatial-block vs leave-one-year-out CV gap to the original mask's gap."
 04_embedding_ecosystems:
-  reflection: []
-  stretch: []
+  reflection:
+    - "TESSERA's checkpoint cell only reports the norm diagnostic instead of asserting it like AlphaEarth's Module 3 checkpoint -- why is a hard assert wrong here, given what the notebook says about TESSERA's documented guarantees?"
+    - "Clay's embeddings are 1024-D and TESSERA's are 128-D, yet the same cosine_similarity_map and norm_diagnostics helpers work unchanged on both -- what does 'provider portability' mean here, and what does it explicitly NOT mean about comparing scores across providers?"
+    - "LGND returns ranked stac_item_id/score pairs instead of raw vectors -- what capability do you lose, and what do you gain, compared to TESSERA/Clay handing you the vectors directly?"
+  stretch:
+    - "Extend the TESSERA similarity ranking to all 5 query points (not just similarity-to-first) and compare which point pairs rank most similar across TESSERA vs the AlphaEarth embeddings from Module 3 for the same locations."
+    - "Write a small helper that runs norm_diagnostics across all three providers (TESSERA, Clay, and a re-loaded AlphaEarth sample) and tabulates mean/std norm side by side."
+    - "If you have an LGND trial token, re-run the LGND cell live and compare the real API response's score distribution against the bundled fixture's."
 05_capstone_artificialization:
-  reflection: []
-  stretch: []
+  reflection:
+    - "The rubric weights validation design at 30%, more than any other single row -- why would 'a convincing classifier with a dishonest validation' fail this rubric even if every other row scored well?"
+    - "The feature matrix stacks the most-recent-year embedding with a change-score column rather than using the change score alone -- what ambiguity does a delta-only feature fail to resolve that this baseline-aware design does?"
+    - "The held-out region's feature matrix pads a zero change-score column instead of computing a real one -- what real limitation does that zero column represent, and how might it understate or overstate the leave-region-out result?"
+  stretch:
+    - "Swap AOI = 'bern' for AOI = 'seville' and compare the spatial-block vs leave-region-out balanced-accuracy gap in both directions."
+    - "Replace the AlphaEarth-only feature matrix with a concatenation of AlphaEarth and TESSERA vectors for the same points (Module 5) and re-run both validations."
+    - "Recompute the model-level uncertainty margin using predict_proba from a RandomForestClassifier instead of LogisticRegression and compare how many points fall below the 0.2 margin threshold."
