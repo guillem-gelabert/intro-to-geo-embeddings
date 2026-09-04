@@ -44,3 +44,4 @@ notebooks/**/executed_*.ipynb
 # sources are the tracked slides/*.md files, HTML/PDF are regenerable.
 slides/*.html
 slides/*.pdf
+slides/pdf/
