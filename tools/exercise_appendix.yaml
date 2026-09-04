@@ -1,0 +1,25 @@
+# Per-notebook reflection/stretch appendix content for derived exercise notebooks.
+# Keyed by notebook slug (input filename stem). Populated with real content in
+# 06-02/06-03; placeholders here so the generator (06-01) has a valid schema to
+# read against before that content exists.
+00_embedding_refresher:
+  reflection: []
+  stretch: []
+00b_representation_inspection:
+  reflection: []
+  stretch: []
+01_alphaearth_access_visualize:
+  reflection: []
+  stretch: []
+02_similarity_and_classification:
+  reflection: []
+  stretch: []
+03_change_detection_and_validation:
+  reflection: []
+  stretch: []
+04_embedding_ecosystems:
+  reflection: []
+  stretch: []
+05_capstone_artificialization:
+  reflection: []
+  stretch: []
