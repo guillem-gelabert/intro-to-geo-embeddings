@@ -63,9 +63,11 @@ def solution_nb():
 
 
 def test_cell_count_minus_hidden(solution_nb):
+    # -1 hidden cell, +1 solution-link markdown cell inserted after the
+    # whole-cell task stub (the marker-based task cell gets no link cell).
     original_count = len(solution_nb.cells)
     result = transform(copy.deepcopy(solution_nb))
-    assert len(result.cells) == original_count - 1
+    assert len(result.cells) == original_count - 1 + 1
 
 
 def test_whole_cell_task_stub_replaces_body(solution_nb):
@@ -166,9 +168,62 @@ def test_appendix_injection_with_matching_key(solution_nb):
 
 def test_appendix_no_matching_key_warns_and_skips(solution_nb):
     appendix = {"other_notebook": {"reflection": ["x"], "stretch": ["y"]}}
-    original_cell_count = len(solution_nb.cells) - 1  # minus hidden cell
+    # -1 hidden cell, +1 solution-link markdown cell (whole-cell task stub).
+    original_cell_count = len(solution_nb.cells) - 1 + 1
     with pytest.warns(UserWarning):
         result = transform(
             copy.deepcopy(solution_nb), appendix=appendix, slug="sample_solution"
         )
     assert len(result.cells) == original_cell_count
+
+
+def test_whole_cell_task_followed_by_solution_link_cell(solution_nb):
+    result = transform(copy.deepcopy(solution_nb), slug="sample_solution")
+    whole_cell_idx = None
+    for i, c in enumerate(result.cells):
+        if (
+            c.cell_type == "code"
+            and "task" in c.metadata.get("tags", [])
+            and "raise NotImplementedError" in c.source
+            and "pre_line" not in c.source
+        ):
+            whole_cell_idx = i
+            break
+    assert whole_cell_idx is not None
+    link_cell = result.cells[whole_cell_idx + 1]
+    assert link_cell.cell_type == "markdown"
+    assert "<details>" in link_cell.source
+    assert "<summary>Show solution</summary>" in link_cell.source
+    assert "notebooks/solutions/sample_solution.ipynb" in link_cell.source
+
+
+def test_marker_task_cell_not_followed_by_solution_link_cell(solution_nb):
+    result = transform(copy.deepcopy(solution_nb), slug="sample_solution")
+    marker_cell_idx = None
+    for i, c in enumerate(result.cells):
+        if (
+            c.cell_type == "code"
+            and "task" in c.metadata.get("tags", [])
+            and "pre_line" in c.source
+        ):
+            marker_cell_idx = i
+            break
+    assert marker_cell_idx is not None
+    next_cell = result.cells[marker_cell_idx + 1]
+    assert not (
+        next_cell.cell_type == "markdown" and "<details>" in next_cell.source
+    )
+
+
+def test_solution_link_never_contains_original_source(solution_nb):
+    result = transform(copy.deepcopy(solution_nb), slug="sample_solution")
+    link_cells = [
+        c
+        for c in result.cells
+        if c.cell_type == "markdown" and "<details>" in c.source
+    ]
+    assert link_cells
+    for link_cell in link_cells:
+        assert "x = 1" not in link_cell.source
+        assert "print(x + y)" not in link_cell.source
+        assert "raise NotImplementedError" not in link_cell.source

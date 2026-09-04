@@ -87,6 +87,16 @@ def _has_marker_pair(source: str) -> bool:
     )
 
 
+def _solution_link_source(slug: str) -> str:
+    return (
+        "<details>\n"
+        "<summary>Show solution</summary>\n\n"
+        f"See <code>notebooks/solutions/{slug}.ipynb</code> — the same section, just "
+        "above this point in the notebook.\n"
+        "</details>"
+    )
+
+
 def transform(nb, appendix: dict | None = None, slug: str = ""):
     """Return a new notebook derived from `nb` per the task/hidden tag vocabulary.
 
@@ -103,14 +113,22 @@ def transform(nb, appendix: dict | None = None, slug: str = ""):
         if "hidden" in tags:
             continue
 
+        whole_cell_stub = False
         if cell.cell_type == "code" and "task" in tags:
             if _has_marker_pair(cell.source):
                 new_source = _stub_marker_span(cell.source)
             else:
                 new_source = _stub_whole_cell(original_cells, i)
+                whole_cell_stub = True
             cell.source = new_source
 
         new_cells.append(cell)
+
+        if whole_cell_stub:
+            link_id = f"solution-link-{slug}-{i}" if slug else f"solution-link-{i}"
+            new_cells.append(
+                new_markdown_cell(_solution_link_source(slug), id=link_id)
+            )
 
     nb.cells = new_cells
 

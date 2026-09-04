@@ -14,7 +14,13 @@ KERNEL_NAME := geo-embeddings-course
 # Defaults to notebooks/solutions, which does not exist yet in this repo (Phase 3).
 NOTEBOOKS_DIR ?= notebooks/solutions
 
-.PHONY: env kernel test test-network execute-notebooks
+.PHONY: env kernel test test-network execute-notebooks exercises
+
+# Solution-notebook stems the exercise generator loops over (Phase 6).
+EXERCISE_STEMS := 00_embedding_refresher 00b_representation_inspection \
+	01_alphaearth_access_visualize 02_similarity_and_classification \
+	03_change_detection_and_validation 04_embedding_ecosystems \
+	05_capstone_artificialization
 
 env:
 	uv sync --group dev
@@ -50,6 +56,21 @@ execute-notebooks:
 	for f in "$${files[@]}"; do \
 		echo "Executing $$f"; \
 		uv run jupyter execute --kernel_name=$(KERNEL_NAME) --timeout=900 --output="executed_$$(basename "$$f")" "$$f"; \
+	done
+
+# Derives all seven exercise notebooks from their tagged solution notebooks
+# (tools/derive_exercise.py, plan 06-06), then pairs each output with a
+# jupytext py:percent twin for reviewable diffs, matching the solutions'
+# pairing convention.
+exercises:
+	@set -euo pipefail; \
+	mkdir -p notebooks/exercises; \
+	for stem in $(EXERCISE_STEMS); do \
+		echo "Deriving notebooks/exercises/$$stem.ipynb"; \
+		uv run python tools/derive_exercise.py \
+			notebooks/solutions/$$stem.ipynb notebooks/exercises/$$stem.ipynb \
+			--appendix tools/exercise_appendix.yaml; \
+		uv run jupytext --set-formats ipynb,py:percent notebooks/exercises/$$stem.ipynb; \
 	done
 
 # Generated, pinned, no-dev, no-hash Colab reference requirements file. Never
