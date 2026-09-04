@@ -73,9 +73,11 @@ KEY_MESSAGES: list[str] = [
 ]
 
 HEADING_RE = re.compile(r'^# (#{1,3}) (.+)$')
+MD_HEADING_RE = re.compile(r'^(#{1,3}) (.+)$')
 CELL_ANCHOR_RE = re.compile(r'\[CELL\]\s+(\S+)\.ipynb\s+\xa7\s+"([^"]+)"')
 # NOTE: "\xa7" is the section-sign character '§'; kept as an escape for clarity.
 SLIDE_ANCHOR_RE = re.compile(r'\[SLIDE\]\s+(\S+)\.(?:md|qmd)\s+#(\d+)')
+DOC_ANCHOR_RE = re.compile(r'\[DOC\]\s+(\S+)\s+\xa7\s+"([^"]+)"')
 LECTURE_SPLIT_RE = re.compile(r'^### Lecture .+$', re.MULTILINE)
 LECTURE_HEADING_RE = re.compile(r'^### (Lecture .+)$', re.MULTILINE)
 TABLE_ROW_DURATION_RE = re.compile(r'^\|\s*(\d{1,2}):(\d{2})\s*\|')
@@ -101,14 +103,35 @@ def extract_notebook_headings(notebook_path: Path | str) -> set[str]:
     return headings
 
 
+def extract_doc_headings(doc_path: Path | str) -> set[str]:
+    """Re-derive the set of markdown headings from an arbitrary doc file.
+
+    `.py` files (jupytext py:percent notebooks) use the `# #`/`# ##`/`# ###`
+    percent-comment heading form (same as `extract_notebook_headings`).
+    `.md` files use plain `#`/`##`/`###` bare markdown headers.
+    """
+    path = Path(doc_path)
+    headings: set[str] = set()
+    is_py = path.suffix == ".py"
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if is_py:
+            match = HEADING_RE.match(line)
+        else:
+            match = MD_HEADING_RE.match(line)
+        if match:
+            headings.add(match.group(2).strip())
+    return headings
+
+
 @dataclass
 class Anchor:
-    kind: str  # "cell" or "slide"
+    kind: str  # "cell", "slide", or "doc"
     raw: str
     notebook_stem: str | None = None
     heading: str | None = None
     deck_stem: str | None = None
     number: int | None = None
+    doc_path: str | None = None
 
 
 def parse_script_anchors(script_markdown_text: str) -> list[Anchor]:
@@ -136,6 +159,17 @@ def parse_script_anchors(script_markdown_text: str) -> list[Anchor]:
                     number=int(slide_match.group(2)),
                 )
             )
+            continue
+        doc_match = DOC_ANCHOR_RE.search(line)
+        if doc_match:
+            anchors.append(
+                Anchor(
+                    kind="doc",
+                    raw=line.strip(),
+                    doc_path=doc_match.group(1),
+                    heading=doc_match.group(2),
+                )
+            )
     return anchors
 
 
@@ -158,15 +192,29 @@ def check_anchors_exist(
     script_name: str = "",
     notebooks_dir: Path | str = DEFAULT_NOTEBOOKS_DIR,
 ) -> None:
-    """Raise MissingAnchor for any [CELL] anchor whose heading isn't in the live notebook.
+    """Raise MissingAnchor for any [CELL]/[DOC] anchor whose heading isn't
+    present in the live source it references.
 
     [SLIDE] anchors are not validated here (no live deck-section index is
-    maintained); only [CELL] anchors are checked against re-derived notebook
-    headings.
+    maintained); [CELL] anchors are checked against re-derived notebook
+    headings, and [DOC] anchors are checked against re-derived headings of
+    the arbitrary markdown/doc file they name (any path, not just
+    notebooks/solutions/*.py).
     """
     notebooks_dir = Path(notebooks_dir)
     headings_cache: dict[str, set[str]] = {}
+    doc_headings_cache: dict[str, set[str]] = {}
     for anchor in anchors:
+        if anchor.kind == "doc":
+            doc_path_str = anchor.doc_path or ""
+            if doc_path_str not in doc_headings_cache:
+                doc_path = REPO_ROOT / doc_path_str
+                if not doc_path.exists():
+                    raise MissingAnchor(script_name, anchor.raw, anchor.heading or "", doc_path_str)
+                doc_headings_cache[doc_path_str] = extract_doc_headings(doc_path)
+            if anchor.heading not in doc_headings_cache[doc_path_str]:
+                raise MissingAnchor(script_name, anchor.raw, anchor.heading or "", doc_path_str)
+            continue
         if anchor.kind != "cell":
             continue
         stem = anchor.notebook_stem
