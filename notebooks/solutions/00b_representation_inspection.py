@@ -176,7 +176,10 @@ comparison = pd.DataFrame(
             "one calendar-year composite (2024)",
             f"one Sentinel-2 L2A scene ({clay_row['datetime']})",
         ],
-        "source": ["AlphaEarth (Google Satellite Embedding)", "Clay v1.5 (LGND corpus)"],
+        "source": [
+            "AlphaEarth (Google Satellite Embedding)",
+            "Clay v1.5 (LGND corpus)",
+        ],
     },
     index=["AlphaEarth pixel", "Clay patch"],
 )
@@ -244,4 +247,3 @@ else:
 # - AlphaEarth catalog: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL
 # - LGND / Clay v1.5 Sentinel-2 L2A corpus (Source Cooperative, CC BY 4.0): https://source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a
 # - SatCLIP paper and repo: https://github.com/microsoft/satclip
-

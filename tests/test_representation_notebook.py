@@ -55,7 +55,9 @@ def test_representation_notebook_degrades_gracefully_without_torch():
     print its skip message — proving the degrade path for real, not
     hypothetically."""
     if importlib.util.find_spec("torch") is not None:
-        pytest.skip("torch is installed in this environment; degrade path not exercised")
+        pytest.skip(
+            "torch is installed in this environment; degrade path not exercised"
+        )
 
     nb = _execute_notebook()
     text = _all_outputs_text(nb)
