@@ -3,17 +3,41 @@
 # 06-02/06-03; placeholders here so the generator (06-01) has a valid schema to
 # read against before that content exists.
 00_embedding_refresher:
-  reflection: []
-  stretch: []
+  reflection:
+    - "Why does L2-normalizing a vector turn the dot product into cosine similarity? What would change if the vectors were not normalized first?"
+    - "The PCA scatter separates cluster A from cluster B on the toy matrix. Does that mean PC1 and PC2 correspond to a named, physical variable? Why or why not?"
+    - "The classifier reaches high accuracy on 6 tiny synthetic points. What about this toy setup makes that result unsurprising, and why wouldn't the same accuracy number be trustworthy on real AlphaEarth data?"
+  stretch:
+    - "Change `cluster_b_center`'s offset from the origin (currently +4.0) to a smaller value and re-run the cosine similarity matrix — at what offset do the two clusters stop being cleanly separable?"
+    - "Add a third synthetic cluster and re-fit the PCA and the classifier. Does a linear classifier still separate all three classes cleanly?"
+    - "Reproject the three toy points to a different projected CRS (e.g. EPSG:32632, UTM zone 32N) instead of EPSG:2056 and compare the resulting coordinates — why do they differ?"
 00b_representation_inspection:
-  reflection: []
-  stretch: []
+  reflection:
+    - "AlphaEarth is a pixel embedding and Clay is a patch embedding. What breaks if you compare their raw vectors as if they described 'the same location' without first accounting for that difference in spatial unit?"
+    - "Why is a Clay embedding tied to one Sentinel-2 scene's date, while an AlphaEarth embedding is tied to a full calendar year? What does that imply about using them together to study change over time?"
+    - "SatCLIP produces a location embedding with no observation date at all. What kind of question could a location embedding answer that a pixel or patch embedding cannot, and vice versa?"
+  stretch:
+    - "Load a different point from `bern` (not `.iloc[0]`) and confirm its AlphaEarth vector is also 64-D and unit-norm — is unit-norm true for every row, or just this one?"
+    - "Compute the cosine similarity between the AlphaEarth pixel vector and the Clay patch vector directly. Does the resulting number mean anything, given they are different embedding spaces?"
+    - "If `torch` is installed in your environment, replace the placeholder `satclip_vector` with a real SatCLIP forward pass (see the isolated `envs/clay/` environment) and compare its dimensionality to AlphaEarth and Clay."
 01_alphaearth_access_visualize:
-  reflection: []
-  stretch: []
+  reflection:
+    - "Why does averaging raw int8 AlphaEarth values silently corrupt the data, while averaging the dequantized, unit-norm vectors does not?"
+    - "The pseudo-RGB composite looks geographically structured even though the three axes plotted have no assigned physical meaning. What is actually driving that visual structure?"
+    - "Path A (Earth Engine) and Path B (the bundled clip) are described as reaching 'identical conclusions.' What exactly stays identical, and what is necessarily different between the two paths (e.g. AOI size, live vs. frozen data)?"
+  stretch:
+    - "Change the three visualization band indices (`A01, A16, A09`) to a different triple and re-run the pseudo-RGB composite — does the landscape still look structured?"
+    - "Increase `n_components` in the PCA call from 3 to 6 and inspect the second and third principal components' maps — do they separate different landscape features than PC1?"
+    - "Pick a different pixel (not the center) for the by-hand dequantization walkthrough and confirm your manual result still matches `dequantize_aef`'s output."
 02_similarity_and_classification:
-  reflection: []
-  stretch: []
+  reflection:
+    - "Why did leave-region-out cost more balanced-accuracy points than spatial-block CV? Which class collapsed most when the model trained on Bern was evaluated on Seville?"
+    - "The positive-minus-negative prototype is described as 'sharpening' a query. What is it removing that a positive-only polygon-mean prototype cannot remove on its own?"
+    - "The random-split accuracy and the spatial-block CV accuracy sit close together in-region, but leave-region-out shows a large gap. What does that difference imply about what a random split actually measures versus what leave-region-out measures?"
+  stretch:
+    - "Change `K` in the search-by-example section and re-run precision@k — at what K does precision drop below 0.7 for the query point used in this notebook?"
+    - "Pick a different `QUERY_ID` in a different land-cover class and rebuild the single-pixel and polygon-mean prototypes for it — does the polygon-mean prototype still outperform the single-pixel query?"
+    - "Re-run the Sentinel-2 baseline comparison and check whether its in-region block-CV gap is larger or smaller than the AlphaEarth embeddings' gap — does that support or contradict the notebook's leakage-resistance hypothesis?"
 03_change_detection_and_validation:
   reflection: []
   stretch: []

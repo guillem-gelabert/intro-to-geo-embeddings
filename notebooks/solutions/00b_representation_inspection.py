@@ -114,7 +114,7 @@ from course.schema import A_COLS
 # spatial unit in this notebook, and the only one with a fixed annual
 # cadence.
 
-# %%
+# %% tags=["task"]
 bern = load("bern", 2024)
 row = bern.iloc[0]
 ae_vector = row[A_COLS].to_numpy(dtype="float32")
@@ -138,11 +138,13 @@ print("Temporal support: one calendar-year composite (2024)")
 # larger footprint than an AlphaEarth pixel, and tied to a single
 # observation rather than a yearly composite.
 
-# %%
+# %% tags=["task"]
 clay = pd.read_parquet("data/clay_sample_fixture.parquet")
 clay_row = clay.iloc[0]
+### BEGIN SOLUTION
 clay_vector = np.array(clay_row["embedding"], dtype="float32")
 clay_norm = float(np.linalg.norm(clay_vector))
+### END SOLUTION
 
 print("Clay patch embedding shape:", clay_vector.shape)
 print("Clay patch embedding L2 norm:", round(clay_norm, 4))
@@ -164,7 +166,7 @@ print("Clay fixture provenance:", json.dumps(clay_provenance, indent=2))
 # Shape and spatial unit are the first two things to check before
 # combining or comparing embeddings from different providers.
 
-# %%
+# %% tags=["task"]
 comparison = pd.DataFrame(
     {
         "dims": [ae_vector.shape[0], clay_vector.shape[0]],

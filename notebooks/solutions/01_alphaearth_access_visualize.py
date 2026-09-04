@@ -241,7 +241,7 @@ print(provenance)
 # lives; every consumer in this course imports it rather than
 # reimplementing it.
 
-# %%
+# %% tags=["task"]
 embedded = dequantize_aef(raw)  # band-first in, band-first out -- no transpose
 print("embedded.shape:", embedded.shape)
 print("max |embedded|:", np.nanmax(np.abs(embedded)))
@@ -250,11 +250,13 @@ print("max |embedded|:", np.nanmax(np.abs(embedded)))
 # applied to genuine values, not just called as a black box.
 row, col = raw.shape[1] // 2, raw.shape[2] // 2
 raw_pixel = raw[:, row, col].astype(np.float32)
+### BEGIN SOLUTION
 step1_scaled = raw_pixel / 127.5
 step2_squared = step1_scaled**2
 step3_signed = step2_squared * np.sign(raw_pixel)
 step4_norm = np.linalg.norm(step3_signed)
 step5_unit = step3_signed / step4_norm
+### END SOLUTION
 print("raw int8 (first 5 bands):", raw_pixel[:5])
 print("after /127.5 (first 5):", step1_scaled[:5])
 print("after **2 (first 5):", step2_squared[:5])
@@ -270,9 +272,11 @@ print("matches dequantize_aef at this pixel:", np.allclose(step5_unit, embedded[
 # dequantized, exactly like the point tables `02_similarity_and_classification.ipynb`
 # uses. That is what makes dot product equal cosine similarity there.
 
-# %%
+# %% tags=["task"]
+### BEGIN SOLUTION
 norms = np.linalg.norm(embedded, axis=0)
 valid = ~np.isnan(norms)
+### END SOLUTION
 print("valid pixels:", valid.sum(), "/", norms.size)
 assert np.allclose(norms[valid], 1.0, atol=1e-3), "dequantized pixels must be unit-norm"
 print("unit-norm check passed for all valid pixels")
@@ -288,11 +292,13 @@ print("unit-norm check passed for all valid pixels")
 # **Why does this map look geographically structured although the three
 # axes have no RGB meaning?**
 
-# %%
+# %% tags=["task"]
 import matplotlib.pyplot as plt
 
+### BEGIN SOLUTION
 pseudo_rgb = embedded[[1, 16, 9]].transpose(1, 2, 0)
 stretched = np.clip((pseudo_rgb + 0.3) / 0.6, 0, 1)
+### END SOLUTION
 
 fig, ax = plt.subplots(figsize=(6, 6))
 ax.imshow(stretched)
@@ -304,14 +310,16 @@ plt.show()
 # %% [markdown]
 # ### PCA on the clip
 
-# %%
+# %% tags=["task"]
 h, w = embedded.shape[1], embedded.shape[2]
 flat = embedded.reshape(64, h * w).T  # (H*W, 64), band-last for sklearn
 valid_mask = ~np.isnan(flat).any(axis=1)
 flat_valid = flat[valid_mask]
 
+### BEGIN SOLUTION
 pca = PCA(n_components=3, random_state=RANDOM_STATE)
 components_valid = pca.fit_transform(flat_valid)
+### END SOLUTION
 
 components_full = np.full((h * w, 3), np.nan, dtype=np.float32)
 components_full[valid_mask] = components_valid
