@@ -262,7 +262,7 @@ Plans:
 
 **Plans**: 5 plans
 Plans:
-- [ ] 07-01-PLAN.md — Quarto/Marp toolchain verification, shared revealjs scaffold, version-banner and attribution partials
+- [x] 07-01-PLAN.md — Quarto/Marp toolchain verification, shared revealjs scaffold, version-banner and attribution partials
 - [ ] 07-02-PLAN.md — Decks: 00 refresher, 00b representation inspection (foundations deck), 01 access/visualize
 - [ ] 07-03-PLAN.md — Decks: 02 similarity/classification (flagship), 03 change detection and validation
 - [ ] 07-04-PLAN.md — Decks: 04 ecosystems, 05 capstone, 06 provenance/licensing (eighth deck, no source notebook)
@@ -316,7 +316,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
 | 6. Exercise Notebooks and Assessments | 6/6 | Complete   | 2026-09-04 |
-| 7. Slide Decks | 0/5 | Not started | - |
+| 7. Slide Decks | 1/5 | In Progress|  |
 | 8. Narration Scripts | 0/8 | Not started | - |
 
 ## Coverage
