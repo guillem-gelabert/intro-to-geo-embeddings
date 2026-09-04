@@ -1,4 +1,5 @@
-"""Repo-wide headless-execution smoke test (EARLY-01..05).
+"""Repo-wide headless-execution smoke test covering every solution notebook shipped
+so far (EARLY-01..05, LATE-01..06).
 
 For every `notebooks/solutions/*.ipynb` (excluding any `executed_*` output
 artifact -- mirrors the Makefile's `execute-notebooks` discovery logic),
