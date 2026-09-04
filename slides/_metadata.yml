@@ -1,0 +1,46 @@
+# Shared slide-deck configuration reference.
+#
+# TOOLCHAIN DECISION (07-01): Quarto is NOT usable on this machine.
+# `brew install --cask quarto` fetches the cask fine but the underlying
+# `.pkg` installer invokes `sudo installer -pkg ...` interactively, which
+# fails non-interactively with "sudo: a password is required" (no askpass
+# helper configured, no TTY available to this agent). Quarto is therefore
+# not installable here without an interactive terminal session.
+#
+# FALLBACK IN USE FOR THE REST OF THIS PHASE: Marp CLI, invoked on demand
+# via `npx --yes @marp-team/marp-cli@4.5.0` (pinned version, per STACK.md
+# and the threat model in 07-01-PLAN.md — never `@latest`). Verified
+# resolving via `npx --yes @marp-team/marp-cli@4.5.0 --version`.
+#
+# Marp has no project-level shared-metadata include mechanism (unlike
+# Quarto's `_metadata.yml`, which every `*.qmd` in the project directory
+# picks up automatically). This file is therefore a REFERENCE block only:
+# every deck's own YAML front-matter (the first `---`...`---` fence in
+# each `slides/NN_*.md`) must repeat these three keys verbatim:
+#
+#   marp: true
+#   theme: default
+#   size: 16:9
+#   paginate: true
+#
+# 16:9 corresponds to Marp's built-in `size: 16:9` (1280x720 default
+# render, matching the 1920x1080 project convention scaled by the same
+# aspect ratio — Quarto's revealjs equivalent would have been
+# `width: 1920, height: 1080`).
+#
+# Theme customization: see slides/custom.scss (Marp consumes it as a CSS
+# theme via `--theme slides/custom.scss` on the marp CLI invocation, or a
+# `theme: custom` front-matter key once registered with `--theme-set`).
+#
+# Speaker notes: Marp supports HTML comments as presenter notes
+# (`<!-- note text -->`), the equivalent of Quarto's `::: {.notes} ... :::`
+# fenced block. Deck-authoring plans should use `<!-- ... -->` blocks for
+# narration-script seeds.
+#
+# embed-resources equivalent: Marp's default single-file HTML output
+# already inlines images/CSS when rendered without `--html` splitting;
+# no extra flag is required for a self-contained deck.
+marp: true
+theme: default
+size: "16:9"
+paginate: true

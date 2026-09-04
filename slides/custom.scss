@@ -1,0 +1,24 @@
+/* Shared Marp theme for Introduction to Geospatial Embeddings decks.
+ *
+ * Kept intentionally minimal per 07-01-PLAN.md: a legible large body/code
+ * font size, no elaborate theming. Load with:
+ *   npx --yes @marp-team/marp-cli@4.5.0 --theme slides/custom.scss slides/NN_*.md
+ */
+
+section {
+  font-size: 28px;
+  line-height: 1.4;
+}
+
+section h1 {
+  font-size: 44px;
+}
+
+section h2 {
+  font-size: 34px;
+}
+
+section pre,
+section code {
+  font-size: 22px;
+}
