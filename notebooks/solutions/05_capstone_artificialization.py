@@ -321,3 +321,159 @@ comparison = pd.DataFrame(
     }
 )
 print(comparison)
+
+# %% [markdown]
+# ## Map: predictions over the AOI
+#
+# A prediction map on its own invites a reader to treat it as settled fact.
+# **This map is deliberately paired with the uncertainty section right
+# below it, not left as a standalone figure** -- per this notebook's own
+# rubric row on interpretation/uncertainty, and because the leave-region-out
+# result above just showed this exact model loses a large share of its
+# accuracy outside its training region. A ranked, human-verified candidate
+# layer is the honest framing; an unqualified "artificialized/not" map is
+# not.
+
+# %% tags=["solution"]
+import matplotlib.pyplot as plt
+
+pred_aoi = model.predict(X_aoi_clf)
+map_gdf = years_gdf.assign(pred=pred_aoi)
+
+fig, ax = plt.subplots(figsize=(6, 6))
+for cls, group in map_gdf.groupby("pred"):
+    ax.scatter(group["lon"], group["lat"], s=8, label=cls, alpha=0.7)
+ax.set_title(f"{AOI}: predicted class per point (in-region fit)")
+ax.set_xlabel("lon")
+ax.set_ylabel("lat")
+ax.legend(loc="upper right", fontsize="small")
+fig.tight_layout()
+fig.savefig("figures/05_prediction_map.png")
+plt.show()
+
+# %% [markdown]
+# ## Uncertainty: model-level and validation-level
+#
+# These are two genuinely different kinds of uncertainty, and conflating
+# them is exactly the overconfidence trap this section exists to avoid:
+#
+# - **Model uncertainty** -- how close a single prediction was to a
+#   different class, for THIS fitted model on THIS data. Computed below as
+#   the margin between the top two predicted-class probabilities: a small
+#   margin means the model itself is unsure, even before asking whether the
+#   model generalizes at all.
+# - **Validation uncertainty** -- how much the reported accuracy itself
+#   would swing under a different sample of the same evaluation, i.e. the
+#   fold-to-fold spread (`std_balanced_accuracy`) already computed by
+#   `spatial_cv_report` above. A model can show a confident (small) margin
+#   on every point and still have a large validation std -- these are not
+#   the same signal, and reporting only one is a form of the confident-
+#   map-hiding-real-uncertainty problem this phase's threat model calls
+#   out (T-05-14).
+#
+# A single accuracy number, with neither of these alongside it, is an
+# overconfident presentation of a change/classification map.
+
+# %% tags=["solution"]
+proba = model.predict_proba(X_aoi_clf)
+sorted_proba = np.sort(proba, axis=1)
+margin = sorted_proba[:, -1] - sorted_proba[:, -2]
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.hist(margin, bins=30, color="tab:blue", alpha=0.8)
+ax.set_title(f"{AOI}: model-level uncertainty (top-1 minus top-2 probability margin)")
+ax.set_xlabel("margin (0 = maximally uncertain, 1 = maximally confident)")
+ax.set_ylabel("count")
+fig.tight_layout()
+fig.savefig("figures/05_uncertainty_margin_hist.png")
+plt.show()
+
+print(
+    f"MODEL-LEVEL uncertainty ({AOI}): mean margin={margin.mean():.3f}, "
+    f"{(margin < 0.2).sum()}/{len(margin)} points with margin < 0.2 (low confidence)"
+)
+print(
+    f"VALIDATION-LEVEL uncertainty: spatial-block CV std_balanced_accuracy="
+    f"{block_report['std_balanced_accuracy']:.3f}; leave-region-out "
+    f"std_balanced_accuracy={lro_report['std_balanced_accuracy']:.3f} "
+    "(fold-to-fold spread, not a per-point number)"
+)
+
+# %% [markdown]
+# **Takeaway:** the map above should be read as a ranked candidate layer a
+# human verifies -- ordered by the margin computed here, low-margin points
+# reviewed first -- never as a finished classification. Both uncertainty
+# numbers printed above matter: a tight model-level margin does not rescue
+# a wide validation-level spread, and vice versa.
+
+# %% [markdown]
+# ## Provenance
+#
+# Every number and figure above traces back to a specific dataset version,
+# CRS, label source and license -- recorded once per table when it was
+# loaded (`course.data.load`) and summarized here with `build_provenance`
+# / `write_provenance` (`course/provenance.py`), never hand-typed. This
+# notebook's own output is held to the same `templates/PROVENANCE_CHECKLIST.md`
+# standard demonstrated throughout the course, rather than only described.
+
+# %% tags=["solution"]
+import json
+
+from course.provenance import build_provenance, write_provenance
+
+provenance = build_provenance(
+    {f"{AOI}_{year}": gdf for year, gdf in years.items()},
+    created_by="05_capstone_artificialization.ipynb",
+)
+write_provenance(provenance, Path("outputs/provenance_05.json"))
+print(json.dumps(provenance, indent=2))
+
+# %% [markdown]
+# ## Rubric self-check
+#
+# The Header's rubric table, revisited here with THIS run's own evidence
+# named for each row -- the worked example a capstone submission's own
+# self-check should imitate:
+#
+# | Criterion | Weight | This notebook's evidence |
+# |---|---|---|
+# | Validation design | 30% | The spatial-block CV cell and the leave-region-out cell above, both required and both reported side by side in the `comparison` table -- not either/or |
+# | Reproducibility and provenance | 15% | The Provenance cell's `outputs/provenance_05.json`, built entirely from `course.data.load`'s carried metadata, never hand-typed |
+# | CRS and alignment correctness | 15% | The `gdf_projected = years_gdf.to_crs(epsg)` reprojection cell before `make_blocks`, guarded by `make_blocks`' own distance-sanity assertion |
+# | Interpretation and uncertainty | 15% | The model-level margin histogram and the validation-level `std_balanced_accuracy` cells above, kept explicitly distinct |
+# | Representation choice | 15% | The Features section's explicit AlphaEarth-at-64-D choice, stated with its trade-off against TESSERA/Clay |
+# | Licensing and ethics | 10% | The Wrap-up's verbatim attribution/license strings below, plus the false-positive-cost statement: a false "artificialized" flag on someone's land can trigger real regulatory or compliance consequences, so a low-confidence flag (per the margin histogram above) must never be presented as certain. Inferred labels like "artificialized" can also be more sensitive than the underlying imagery itself -- they imply a judgment about the land's status that the raw pixels alone do not. |
+
+# %% [markdown]
+# ## Wrap-up
+#
+# **Takeaways:**
+#
+# - This capstone template assembles an AOI-to-provenance pipeline
+#   entirely from `course` helpers reused, unmodified, from Modules 3-5.
+# - Validation design carries the largest rubric weight for a reason: the
+#   leave-region-out gap measured earlier is the single largest source of
+#   overconfidence this pipeline could produce if only in-region numbers
+#   were reported.
+# - A prediction map is only honest alongside both a model-level and a
+#   validation-level uncertainty measure -- neither substitutes for the
+#   other.
+# - The provenance file and the rubric self-check above are not optional
+#   extras; they are graded rubric rows, produced automatically from
+#   metadata already carried by `course.data.load`.
+#
+# **What's next:** the blank templates in `templates/PROVENANCE_CHECKLIST.md`
+# and `templates/MODEL_DATA_CARD_TEMPLATE.md` are what you fill in for your
+# own capstone AOI -- this notebook is the worked example of applying them
+# to a finished run, not a substitute for filling them in yourself.
+#
+# **Resources (verbatim attribution/license strings for every source used
+# in this notebook):**
+#
+# - AlphaEarth / Satellite Embedding -- CC BY 4.0 -- "The AlphaEarth
+#   Foundations Satellite Embedding dataset is produced by Google and
+#   Google DeepMind."
+# - ESA WorldCover 2021 v200 (label source) -- CC BY 4.0 -- "© ESA
+#   WorldCover project 2021 / Contains modified Copernicus Sentinel data
+#   (2021) processed by ESA WorldCover consortium (citation: Zanaga et al.
+#   2022, https://doi.org/10.5281/zenodo.7254221)"
