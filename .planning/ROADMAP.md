@@ -283,7 +283,25 @@ Plans:
   4. The key teaching messages appear verbatim — unit-length so dot equals cosine; A17 is not NDVI; random splits leak spatially; Dynamic World is a model output; 1 − cosine is not a semantic transition — with pronunciation notes for provider and place names.
   5. Each script references its module's exercise tasks and quiz so video, notebook and assessment tie together.
 
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 08-01-PLAN.md — narration script template + anchor/timing verifier tool (tools/verify_narration_scripts.py), TDD
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 08-02-PLAN.md — Module 00 refresher + Module 01 foundations scripts (60 min)
+- [ ] 08-03-PLAN.md — Module 02 access/visualize script (50 min)
+- [ ] 08-04-PLAN.md — Module 03 similarity/classification script (65 min, flagship)
+- [ ] 08-05-PLAN.md — Module 04 change detection script (60 min)
+- [ ] 08-06-PLAN.md — Module 05 ecosystems script (55 min)
+- [ ] 08-07-PLAN.md — Module 06 production/provenance + Module 07 capstone scripts (70 min)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 08-08-PLAN.md — full 8-script aggregate verification (360-min grand total, key messages), human checkpoint
 
 ## Progress
 
@@ -299,7 +317,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Later Module Solution Notebooks | 9/9 | Complete   | 2026-09-04 |
 | 6. Exercise Notebooks and Assessments | 6/6 | Complete   | 2026-09-04 |
 | 7. Slide Decks | 0/5 | Not started | - |
-| 8. Narration Scripts | 0/TBD | Not started | - |
+| 8. Narration Scripts | 0/8 | Not started | - |
 
 ## Coverage
 
