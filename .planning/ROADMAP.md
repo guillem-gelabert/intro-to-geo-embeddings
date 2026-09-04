@@ -198,8 +198,8 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — course.embeddings change_score + norm_diagnostics helpers
-- [ ] 05-08-PLAN.md — model/data card template, provenance checklist, Module 3 worked example
+- [x] 05-01-PLAN.md — course.embeddings change_score + norm_diagnostics helpers
+- [x] 05-08-PLAN.md — model/data card template, provenance checklist, Module 3 worked example
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -276,7 +276,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Frozen Two-Region Teaching Datasets | 9/12 | In Progress|  |
 | 3. Similarity Search and Classification Notebook | 4/4 | Complete   | 2026-09-03 |
 | 4. Earlier Module Solution Notebooks | 7/7 | Complete   | 2026-09-04 |
-| 5. Later Module Solution Notebooks | 0/9 | In Progress| - |
+| 5. Later Module Solution Notebooks | 2/9 | In Progress|  |
 | 6. Exercise Notebooks and Assessments | 0/TBD | Not started | - |
 | 7. Slide Decks | 0/TBD | Not started | - |
 | 8. Narration Scripts | 0/TBD | Not started | - |
