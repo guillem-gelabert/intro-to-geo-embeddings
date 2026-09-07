@@ -1,0 +1,288 @@
+{
+ "slug": "00-refresher",
+ "stem": "00_embedding_refresher",
+ "title": "Module 1: Embedding Refresher",
+ "blocks": [
+  {
+   "type": "prose",
+   "html": "<h2>What you will learn</h2>\n<ol>\n<li>NumPy vectors and L2 normalization</li>\n<li>Cosine similarity</li>\n<li>PCA on a toy embedding matrix</li>\n<li>A tiny classifier with a train/test split</li>\n<li>CRS reprojection</li>\n</ol>\n<table>\n<thead>\n<tr>\n<th>Prerequisite</th>\n<th>Needed?</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Python basics</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td>Linear algebra</td>\n<td><strong>No</strong></td>\n</tr>\n<tr>\n<td>GIS background</td>\n<td><strong>No</strong></td>\n</tr>\n</tbody>\n</table>\n<p><strong>Time to complete:</strong> ~25 minutes.</p>\n<p>Course reference environment: 2026-08 release. Provider APIs may change.\nEvery cloud notebook has a local/offline fallback.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Vectors and L2 normalization</h2>\n<p>A geospatial embedding is just a vector — a fixed-length list of numbers\ndescribing a location. Two synthetic &quot;location clusters&quot; below stand in\nfor that idea: six 8-dimensional vectors, three drawn tightly around one\ncenter and three around another.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "rng = np.random.default_rng(RANDOM_STATE)\ncluster_a_center = rng.normal(loc=0.0, scale=1.0, size=8)\ncluster_b_center = cluster_a_center + 4.0\n\ntoy_matrix = np.vstack(\n    [\n        rng.normal(loc=cluster_a_center, scale=0.3, size=(3, 8)),\n        rng.normal(loc=cluster_b_center, scale=0.3, size=(3, 8)),\n    ]\n)\ncluster_labels = np.array([\"A\", \"A\", \"A\", \"B\", \"B\", \"B\"])\n\nraw_norms = np.linalg.norm(toy_matrix, axis=1)\nprint(\"raw (non-unit) norms:\", np.round(raw_norms, 3))",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "raw (non-unit) norms: [ 3.039  3.239  2.962 10.816 11.017 10.788]",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "normalized = toy_matrix / np.linalg.norm(toy_matrix, axis=1, keepdims=True)\nunit_norms = np.linalg.norm(normalized, axis=1)\nprint(\"norms after L2 normalization:\", np.round(unit_norms, 6))\nassert np.allclose(unit_norms, 1.0)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "norms after L2 normalization: [1. 1. 1. 1. 1. 1.]",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> unit-length vectors turn the dot product into cosine\nsimilarity — the same fact <code>02_similarity_and_classification.ipynb</code>\nrelies on for real AlphaEarth data.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Cosine similarity</h2>\n<p>With every row unit-norm, the full pairwise dot-product matrix below IS\nthe pairwise cosine similarity matrix — no extra division needed.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "similarity_matrix = normalized @ normalized.T\nassert abs(similarity_matrix.max() - 1.0) < 1e-6\n\nimport matplotlib.pyplot as plt\n\nfig, ax = plt.subplots(figsize=(5, 4))\nim = ax.imshow(similarity_matrix, vmin=-1, vmax=1, cmap=\"viridis\")\nax.set_xticks(range(6))\nax.set_yticks(range(6))\nax.set_xticklabels(cluster_labels)\nax.set_yticklabels(cluster_labels)\nax.set_title(\"Pairwise cosine similarity (toy vectors)\")\nfig.colorbar(im, ax=ax, label=\"cosine similarity\")\nfig.tight_layout()\nfig.savefig(\"figures/00_cosine_similarity_matrix.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/00-refresher/fig-01.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> vectors within the same synthetic cluster score high cosine\nsimilarity; vectors across clusters score low — this is the same signal\n<code>cosine_similarity_map</code> computes at scale.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>PCA on a toy embedding matrix</h2>\n<p>Real embeddings have far more dimensions than can be plotted directly.\nPCA finds the 2 directions of greatest variance in the toy matrix so it\ncan be visualized on a page, at the cost of discarding everything else.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "from sklearn.decomposition import PCA\n\npca = PCA(n_components=2, random_state=RANDOM_STATE)\ncomponents = pca.fit_transform(toy_matrix)\nprint(\"explained_variance_ratio_:\", np.round(pca.explained_variance_ratio_, 3))",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "explained_variance_ratio_: [0.995 0.002]",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "fig, ax = plt.subplots(figsize=(5, 4))\nfor label in [\"A\", \"B\"]:\n    mask = cluster_labels == label\n    ax.scatter(components[mask, 0], components[mask, 1], s=80, label=f\"cluster {label}\")\nax.set_xlabel(\"PC1\")\nax.set_ylabel(\"PC2\")\nax.set_title(\"PCA of the toy embedding matrix\")\nax.legend()\nfig.tight_layout()\nfig.savefig(\"figures/00_pca_scatter.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/00-refresher/fig-02.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> the first two components separate the two synthetic\nclusters in this toy sample — they do not correspond to a named physical\nvariable.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>A tiny classifier</h2>\n<p>With unit-normalized vectors and known cluster labels in hand, the next\nnatural question is whether a simple linear model can recover the\nclusters from the vectors alone.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "from sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import accuracy_score\nfrom sklearn.model_selection import train_test_split\n\nX_train, X_test, y_train, y_test = train_test_split(\n    normalized,\n    cluster_labels,\n    test_size=0.34,\n    random_state=RANDOM_STATE,\n    stratify=cluster_labels,\n)\n\nclf = LogisticRegression(random_state=RANDOM_STATE)\nclf.fit(X_train, y_train)\ny_pred = clf.predict(X_test)\naccuracy = accuracy_score(y_test, y_pred)\nprint(f\"test-set accuracy: {accuracy:.2f}\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "test-set accuracy: 0.33",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> a linear classifier separates the two synthetic clusters\nusing only the unit-normalized vectors.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>A CRS reprojection reminder</h2>\n<p>Coordinates in EPSG:4326 (longitude/latitude, degrees) are not metres —\nevery later notebook reprojects to a projected CRS before measuring\ndistances. Three tiny points near Bern, reused from the same study area\n<code>02_similarity_and_classification.ipynb</code> uses, make this concrete.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import geopandas as gpd\nfrom shapely.geometry import Point\n\nfrom course.config import AREAS\n\nmin_lon, min_lat, max_lon, max_lat = AREAS[\"bern\"][\"bbox_4326\"]\nbern_lon, bern_lat = (min_lon + max_lon) / 2, (min_lat + max_lat) / 2\n\ntoy_points = gpd.GeoDataFrame(\n    {\"name\": [\"p0\", \"p1\", \"p2\"]},\n    geometry=[\n        Point(bern_lon, bern_lat),\n        Point(bern_lon + 0.01, bern_lat),\n        Point(bern_lon, bern_lat + 0.01),\n    ],\n    crs=\"EPSG:4326\",\n)\nprint(\"before reprojection:\", toy_points.crs)\n\ntoy_points_2056 = toy_points.to_crs(epsg=2056)\nprint(\"after reprojection:\", toy_points_2056.crs)\nprint(toy_points_2056.geometry.get_coordinates())",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "before reprojection: EPSG:4326\nafter reprojection: EPSG:2056\n              x             y\n0  2.600865e+06  1.199880e+06\n1  2.601627e+06  1.199880e+06\n2  2.600865e+06  1.200991e+06",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> every later notebook reprojects to a projected CRS\n(EPSG:2056 for the Bern region) before measuring distances in metres —\nEPSG:4326 degrees are not metres.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Wrap-up</h2>\n<p><strong>Takeaways:</strong></p>\n<ul>\n<li>L2-normalizing vectors makes the dot product equal to cosine\nsimilarity.</li>\n<li>Cosine similarity separates the toy clusters cleanly; the same idea\nscales to real 64-D AlphaEarth embeddings.</li>\n<li>PCA compresses a high-dimensional embedding to 2 axes for plotting,\nat the cost of everything those 2 axes do not capture.</li>\n<li>A simple linear classifier can already recover known clusters from\nunit-normalized vectors and a train/test split.</li>\n<li>EPSG:4326 degrees must be reprojected to a projected CRS (e.g.\nEPSG:2056) before any metre-based distance calculation.</li>\n</ul>\n<p><strong>What's next:</strong> <code>00b_representation_inspection.ipynb</code> and\n<code>01_alphaearth_access_visualize.ipynb</code> build directly on these ideas\nusing real AlphaEarth data.</p>\n<p><strong>Resources:</strong></p>\n<ul>\n<li>scikit-learn PCA: https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html</li>\n<li>scikit-learn LogisticRegression: https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html</li>\n<li>pyproj/geopandas CRS docs: https://geopandas.org/en/stable/docs/user_guide/projections.html</li>\n</ul>\n"
+  }
+ ],
+ "quiz": [
+  {
+   "id": "Q1",
+   "prompt_html": "<p>In the &quot;Vectors and L2 normalization&quot; section, why does L2-normalizing two vectors make their dot product equal to their cosine similarity?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Because L2 normalization removes negative values from the vectors.",
+     "explanation_html": "<p>Incorrect — normalization rescales a vector's length, it does not touch the sign of any component. See the &quot;Vectors and L2 normalization&quot; section: the raw (non-unit) norms printed are not all positive-only vectors to begin with.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "Because dividing each vector by its own norm sets every vector's length to 1, and cosine similarity is defined as the dot product divided by the product of the two norms — which becomes 1 once both norms are 1.",
+     "explanation_html": "<p>Correct — this is exactly the Takeaway of that section: &quot;unit-length vectors turn the dot product into cosine similarity.&quot; Once <code>‖a‖ = ‖b‖ = 1</code>, <code>cos(a,b) = a·b / (‖a‖‖b‖) = a·b</code>.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Because cosine similarity and dot product are mathematically identical for any two vectors, regardless of normalization.",
+     "explanation_html": "<p>Incorrect — this is only true after normalization. The section explicitly prints &quot;raw (non-unit) norms&quot; before normalizing to show they are not already unit vectors.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Because L2 normalization is only meaningful for embeddings, not for arbitrary vectors.",
+     "explanation_html": "<p>Incorrect — the section demonstrates this on a toy synthetic matrix that has nothing to do with embeddings specifically; it's a general linear-algebra fact.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q2",
+   "prompt_html": "<p>In the &quot;Cosine similarity&quot; section, the notebook shows vectors within the same synthetic cluster scoring high cosine similarity. What does a high cosine similarity between two vectors tell you?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "That the two vectors point in a similar direction in the embedding space.",
+     "explanation_html": "<p>Correct — this is what the &quot;Cosine similarity&quot; section's Takeaway demonstrates: same-cluster vectors, which were constructed to point in similar directions, score high.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "That the two underlying real-world objects are physically close to each other geographically.",
+     "explanation_html": "<p>Incorrect — the toy matrix in this section has no geography at all; cosine similarity is purely a statement about vector direction, not spatial proximity. Later notebooks (Module 3) test whether that direction similarity correlates with land-cover label agreement, and show it is not a guarantee.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "That the two vectors have identical magnitude.",
+     "explanation_html": "<p>Incorrect — cosine similarity is magnitude-independent by construction (see Q1); two vectors can have wildly different lengths and identical cosine similarity if they point the same way.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "That the two vectors were sampled from the same probability distribution.",
+     "explanation_html": "<p>Incorrect — the section never claims a statistical-distribution interpretation; it only shows within-cluster vs across-cluster cosine scores on a synthetic, deterministically constructed matrix.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q3",
+   "prompt_html": "<p>In &quot;PCA on a toy embedding matrix,&quot; the notebook prints <code>explained_variance_ratio_</code> for the first components. What is the correct interpretation of this output?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "It tells you what real-world attribute (e.g. brightness, wetness) each component measures.",
+     "explanation_html": "<p>Incorrect — PCA components are directions of maximum variance in the data as given; the section's Takeaway is that they &quot;separate the two synthetic clusters,&quot; not that they measure a named physical property. (This exact trap is revisited more explicitly in Module 2's &quot;Caption&quot; on the AlphaEarth PCA map.)</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "It tells you what fraction of the total variance in the toy matrix is captured by each component.",
+     "explanation_html": "<p>Correct — <code>explained_variance_ratio_</code> is exactly that: the proportion of variance along each principal axis. The section's Takeaway is that &quot;the first two components separate the two synthetic clusters,&quot; which is a variance/separability claim, not a labeled-meaning claim.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "It tells you the classification accuracy you should expect from a downstream classifier.",
+     "explanation_html": "<p>Incorrect — variance explained by PCA components has no direct arithmetic relationship to classifier accuracy; the &quot;A tiny classifier&quot; section trains and evaluates a separate model to get an accuracy number.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "It is only meaningful once you have at least 64 dimensions, as in AlphaEarth.",
+     "explanation_html": "<p>Incorrect — the refresher deliberately uses a small toy matrix, not 64-D AlphaEarth vectors, to demonstrate PCA at all; the concept generalizes regardless of dimensionality.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q4",
+   "prompt_html": "<p>In &quot;A tiny classifier,&quot; why does the notebook print a held-out <strong>test-set</strong> accuracy rather than reporting accuracy on the data the model was trained on?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Because scikit-learn requires you to always split your data before calling `.fit()`.",
+     "explanation_html": "<p>Incorrect — scikit-learn does not enforce this; nothing prevents calling <code>.score()</code> on the training set. The section's point is methodological, not a library constraint.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "Because a model can score well on data it has already memorized, so accuracy on unseen (test) data is the only number that tells you whether it generalizes.",
+     "explanation_html": "<p>Correct — this is the purpose of the train/test split shown in &quot;A tiny classifier&quot;: the printed <code>test-set accuracy</code> is deliberately measured on data excluded from fitting, precisely so the score reflects generalization rather than memorization. Module 3 escalates this same idea into the random-split-vs-spatial-CV comparison.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Because training-set accuracy is always exactly 100% and therefore uninformative.",
+     "explanation_html": "<p>Incorrect — training accuracy is not guaranteed to be 100% (that depends on model capacity and data separability); the reason to prefer test accuracy is about generalization, not a guaranteed ceiling.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Because the toy classifier in this section is too simple to be evaluated on training data at all.",
+     "explanation_html": "<p>Incorrect — any model can technically be scored on its own training data; the section's message is that doing so is misleading, not impossible.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q5",
+   "prompt_html": "<p>In &quot;A CRS reprojection reminder,&quot; the toy points are reprojected before their coordinates are printed. Why does the notebook insist on a projected CRS (e.g. EPSG:2056) rather than staying in geographic coordinates (EPSG:4326, lon/lat degrees)?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Because geographic-CRS coordinates cannot be stored in a GeoDataFrame.",
+     "explanation_html": "<p>Incorrect — geopandas stores geometries in whatever CRS you assign, including EPSG:4326; the notebook explicitly prints <code>toy_points.crs</code> (geographic) before reprojecting, proving it's a valid starting state.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "Because distances and areas computed in degrees do not correspond to consistent metre-based units, so any later step that needs real distances (like spatial blocking in Module 3) requires a projected, metre-based CRS first.",
+     "explanation_html": "<p>Correct — this is exactly the section's Takeaway: &quot;every later notebook reprojects to a projected CRS&quot; before doing anything distance-based. Module 3's spatial-CV section states the same rule explicitly for <code>make_blocks</code>, which &quot;refuses a geographic CRS outright.&quot;</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Because EPSG:2056 is the only CRS matplotlib can plot.",
+     "explanation_html": "<p>Incorrect — matplotlib has no CRS awareness at all; reprojection has nothing to do with plotting capability.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Because AlphaEarth embeddings are only defined in EPSG:2056.",
+     "explanation_html": "<p>Incorrect — AlphaEarth data is delivered per UTM zone (EPSG:327xx) per the access notebook; EPSG:2056 is simply the Swiss projected CRS chosen for Bern-region distance calculations in this course.</p>\n"
+    }
+   ]
+  }
+ ]
+}

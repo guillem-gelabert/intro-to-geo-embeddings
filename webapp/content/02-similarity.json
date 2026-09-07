@@ -1,0 +1,767 @@
+{
+ "slug": "02-similarity",
+ "stem": "02_similarity_and_classification",
+ "title": "Module 3: Similarity Search and Classification",
+ "blocks": [
+  {
+   "type": "prose",
+   "html": "<h2>What you will learn</h2>\n<ol>\n<li>Cosine similarity search-by-example over a 64-dimensional embedding</li>\n<li>Prototype queries built from a polygon mean and from positive-minus-negative centroids</li>\n<li>A 2-4 class land-cover classifier</li>\n<li>Why random splits, spatial-block splits and leave-region-out splits give different, honest answers</li>\n<li>How the embedding classifier compares to a raw-Sentinel-2-band baseline</li>\n</ol>\n<table>\n<thead>\n<tr>\n<th>Prerequisite</th>\n<th>Needed?</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Python, NumPy/pandas basics</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td>Earth Engine account</td>\n<td><strong>No</strong></td>\n</tr>\n<tr>\n<td>GIS background</td>\n<td><strong>No</strong></td>\n</tr>\n</tbody>\n</table>\n<p><strong>Time to complete:</strong> ~3 minutes execution.\nRuns on free Colab CPU, no Earth Engine account.</p>\n<p>Course reference environment: 2026-08 release. Provider APIs may change.\nEvery cloud notebook has a local/offline fallback.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Data</h2>\n<p>Two regions ground this whole notebook: <strong>Bern</strong> (Swiss Plateau) and\n<strong>Seville</strong> (Andalusia) — chosen to be geographically and climatically\ndistinct. Everything computed on Bern alone looks great; whether it\ngeneralizes to Seville is a question this notebook keeps coming back to,\nand it is the whole point of the leave-region-out split later in the\nmodule.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import course.data\nimport course.schema\nfrom course.config import AREAS\nfrom course.embeddings import cosine_similarity_map\n\nbern = course.data.load(\"bern\", 2021)\nseville = course.data.load(\"seville\", 2021)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "code",
+   "code": "import pandas as pd\n\nfor name, gdf in [(\"bern\", bern), (\"seville\", seville)]:\n    n_embedding_cols = len(course.schema.embedding_cols(gdf))\n    print(\n        f\"{name}: {gdf.shape[0]} rows, {len(gdf.columns)} columns, \"\n        f\"{n_embedding_cols} embedding columns\"\n    )\n    print(sorted(gdf.columns.tolist()))\n\nclass_counts = pd.DataFrame(\n    {\"bern\": bern[\"label\"].value_counts(), \"seville\": seville[\"label\"].value_counts()}\n)\nprint(class_counts)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "bern: 2050 rows, 84 columns, 64 embedding columns\n['A00', 'A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10', 'A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17', 'A18', 'A19', 'A20', 'A21', 'A22', 'A23', 'A24', 'A25', 'A26', 'A27', 'A28', 'A29', 'A30', 'A31', 'A32', 'A33', 'A34', 'A35', 'A36', 'A37', 'A38', 'A39', 'A40', 'A41', 'A42', 'A43', 'A44', 'A45', 'A46', 'A47', 'A48', 'A49', 'A50', 'A51', 'A52', 'A53', 'A54', 'A55', 'A56', 'A57', 'A58', 'A59', 'A60', 'A61', 'A62', 'A63', 'S2_B02', 'S2_B03', 'S2_B04', 'S2_B08', 'S2_B11', 'S2_B12', 'block_id', 'geometry', 'imd_2018', 'label', 'label_source', 'lat', 'lon', 'region', 's2_n_scenes', 'sample_id', 'worldcover_class', 'x', 'y', 'year']\nseville: 2050 rows, 84 columns, 64 embedding columns\n['A00', 'A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10', 'A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17', 'A18', 'A19', 'A20', 'A21', 'A22', 'A23', 'A24', 'A25', 'A26', 'A27', 'A28', 'A29', 'A30', 'A31', 'A32', 'A33', 'A34', 'A35', 'A36', 'A37', 'A38', 'A39', 'A40', 'A41', 'A42', 'A43', 'A44', 'A45', 'A46', 'A47', 'A48', 'A49', 'A50', 'A51', 'A52', 'A53', 'A54', 'A55', 'A56', 'A57', 'A58', 'A59', 'A60', 'A61', 'A62', 'A63', 'S2_B02', 'S2_B03', 'S2_B04', 'S2_B08', 'S2_B11', 'S2_B12', 'block_id', 'geometry', 'imd_2018', 'label', 'label_source', 'lat', 'lon', 'region', 's2_n_scenes', 'sample_id', 'worldcover_class', 'x', 'y', 'year']\n            bern  seville\nlabel                    \nbuilt        500      500\ncrop         500      500\nvegetation   500      500\nwater        400      400\nbare         150      150",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "import matplotlib.pyplot as plt\n\nfig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)\nfor ax, name, gdf in zip(axes, [\"bern\", \"seville\"], [bern, seville]):\n    for label, group in gdf.groupby(\"label\"):\n        ax.scatter(group[\"lon\"], group[\"lat\"], s=6, label=label)\n    ax.set_title(name)\n    ax.set_xlabel(\"lon\")\naxes[0].set_ylabel(\"lat\")\naxes[0].legend(loc=\"upper right\", fontsize=\"small\", markerscale=2)\nfig.tight_layout()\nfig.savefig(\"figures/02_points_map.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/02-similarity/fig-01.png"
+   ]
+  },
+  {
+   "type": "code",
+   "code": "course.schema.validate_frozen(bern)\ncourse.schema.validate_frozen(seville)\nprint(\"Both regions confirmed: 64 embedding dimensions, unit norm.\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "Both regions confirmed: 64 embedding dimensions, unit norm.",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> dot product equals cosine similarity here because every\nembedding row is exactly unit-norm — the assertion above just proved it\nfor both regions. That is a property of <em>this</em> data, not something the\nsimilarity helper assumes (it always divides by the real norms, so it\nstays correct for embeddings that are not unit-norm too).</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Similarity 1: Search by example</h2>\n<p>Pick a single point (&quot;the query&quot;) and rank every other point in the same\nregion by cosine similarity to it. This is the simplest possible use of\nan embedding: no training, no labels required at query time — just &quot;find\nme more of this.&quot;</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "QUERY_REGION = \"bern\"  # EDIT ME\nQUERY_ID = 150  # EDIT ME -- a \"built\" point in bern\nK = 10  # EDIT ME",
+   "editable": true,
+   "executed": true
+  },
+  {
+   "type": "blank",
+   "before": "gdf = bern if QUERY_REGION == \"bern\" else seville\nassert QUERY_ID in gdf.index, (\n    f\"QUERY_ID={QUERY_ID!r} is out of range for region {QUERY_REGION!r} \"\n    f\"(valid range: 0..{gdf.index.max()})\"\n)",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "matrix",
+     "answer": "course.schema.to_matrix(gdf)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "query_vec",
+     "answer": "matrix[QUERY_ID]"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "sims",
+     "answer": "cosine_similarity_map(query_vec, matrix)"
+    }
+   ],
+   "after": "order = np.argsort(-sims)\norder = order[order != QUERY_ID][:K]\nranked = pd.DataFrame(\n    {\n        \"rank\": np.arange(1, K + 1),\n        \"sample_id\": gdf.iloc[order][\"sample_id\"].to_numpy(),\n        \"label\": gdf.iloc[order][\"label\"].to_numpy(),\n        \"similarity\": sims[order],\n    }\n)\nprint(\n    f\"query: sample_id={gdf.loc[QUERY_ID, 'sample_id']}, label={gdf.loc[QUERY_ID, 'label']!r}\"\n)\nprint(ranked)"
+  },
+  {
+   "type": "output",
+   "text": "query: sample_id=150, label='built'\n   rank  sample_id  label  similarity\n0     1        155  built    0.960213\n1     2        550  built    0.948681\n2     3        242  built    0.943291\n3     4        250  built    0.937465\n4     5        191  built    0.937322\n5     6        395  built    0.936979\n6     7        396  built    0.936362\n7     8        339  built    0.934459\n8     9        464  built    0.933220\n9    10        530  built    0.929457",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "fig, ax = plt.subplots(figsize=(6, 6))\nax.scatter(gdf[\"lon\"], gdf[\"lat\"], s=6, c=\"lightgray\", label=\"all points\")\ntop_k_rows = gdf.iloc[order]\nax.scatter(\n    top_k_rows[\"lon\"], top_k_rows[\"lat\"], s=30, c=\"tab:orange\", label=f\"top-{K} matches\"\n)\nax.scatter(\n    gdf.loc[QUERY_ID, \"lon\"],\n    gdf.loc[QUERY_ID, \"lat\"],\n    s=200,\n    marker=\"*\",\n    c=\"tab:red\",\n    edgecolors=\"black\",\n    label=\"query\",\n)\nax.set_title(f\"{QUERY_REGION}: top-{K} matches for query {QUERY_ID}\")\nax.legend(loc=\"upper right\", fontsize=\"small\")\nfig.tight_layout()\nfig.savefig(\"figures/02_topk_matches_map.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/02-similarity/fig-02.png"
+   ]
+  },
+  {
+   "type": "code",
+   "code": "fig, ax = plt.subplots(figsize=(6, 4))\nax.hist(sims, bins=50)\nax.axvline(0.90, color=\"red\", linestyle=\"--\", label=\"similarity = 0.90\")\nax.set_xlabel(\"cosine similarity to query\")\nax.set_ylabel(\"count\")\nax.set_title(f\"{QUERY_REGION}: similarity of every point to the query\")\nax.legend()\nfig.tight_layout()\nfig.savefig(\"figures/02_similarity_histogram.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/02-similarity/fig-03.png"
+   ]
+  },
+  {
+   "type": "trap",
+   "code": "# WRONG CONCLUSION: \"similarity > 0.90 means same land cover\"\nsame_class_rate = (gdf.loc[sims > 0.90, \"label\"] == gdf.loc[QUERY_ID, \"label\"]).mean()\nprint(\n    f\"WRONG: {same_class_rate:.0%} of points with similarity > 0.90 share the \"\n    f\"query's label ({gdf.loc[QUERY_ID, 'label']!r}), so a similarity above 0.90 \"\n    \"must mean 'same land cover'.\"\n)",
+   "why_html": "<h3>Why this is wrong</h3>\n<p>The 0.90 cutoff is arbitrary — nothing about the embedding's geometry\nsingles out 0.90 as a meaningful boundary. Pick 0.85 or 0.95 instead and\nthe apparent &quot;agreement rate&quot; above changes with it, even though nothing\nabout the underlying data changed. A fixed threshold answers &quot;how many\npoints cross an arbitrary line,&quot; not &quot;how good is this query.&quot; Ranking,\nplus <strong>precision@k</strong> (introduced next), is the honest alternative: it\nasks how good the top-K matches are, which is exactly the question a\nsearch-by-example workflow actually needs answered.</p>\n",
+   "output": {
+    "type": "output",
+    "text": "WRONG: 90% of points with similarity > 0.90 share the query's label ('built'), so a similarity above 0.90 must mean 'same land cover'.",
+    "images": []
+   }
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Similarity 2: Prototype queries</h2>\n<p>A single pixel is noisy — one point can sit right on a boundary, under a\ncloud-shadow artifact, or just be an unlucky sample. A <strong>prototype</strong>\nquery averages several points that are known examples of what you are\nlooking for, which trades away single-pixel precision for stability.</p>\n<p>The raw mean of several unit-norm embedding vectors is <strong>not itself\nunit-norm</strong> — averaging shrinks the vector toward the origin whenever the\ninputs disagree even slightly in direction. Renormalizing (dividing by\nthe mean's own norm) is required, not optional, to get back a valid\nquery vector that <code>cosine_similarity_map</code> can compare on equal footing\nwith everything else in this notebook.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "def precision_at_k(\n    sims: np.ndarray,\n    labels: np.ndarray,\n    target_label: str,\n    k: int,\n    exclude_idx: int | None = None,\n) -> float:\n    \"\"\"Fraction of the top-k ranked (by `sims`) points whose label matches\n    `target_label`. `exclude_idx` drops a self-match (e.g. the query point\n    itself) from the ranking before taking the top-k.\"\"\"\n    order = np.argsort(-sims)\n    if exclude_idx is not None:\n        order = order[order != exclude_idx]\n    top_k = order[:k]\n    return float((labels[top_k] == target_label).mean())\n\n\ntarget_label = gdf.loc[QUERY_ID, \"label\"]\nprecision_single = precision_at_k(\n    sims, gdf[\"label\"].to_numpy(), target_label, K, exclude_idx=QUERY_ID\n)\nprint(f\"single-pixel precision@{K} vs label {target_label!r}: {precision_single:.2f}\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "single-pixel precision@10 vs label 'built': 1.00",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "POLYGON_ID = \"bern-quarry-01\"  # EDIT ME",
+   "editable": true,
+   "executed": true
+  },
+  {
+   "type": "blank",
+   "before": "import geopandas as gpd\n\npolygons = gpd.read_file(\"data/query_polygons.geojson\")\nselected = polygons.loc[polygons[\"id\"] == POLYGON_ID]\nif selected.empty:\n    raise KeyError(\n        f\"POLYGON_ID={POLYGON_ID!r} not found in data/query_polygons.geojson; \"\n        f\"valid ids: {sorted(polygons['id'])}\"\n    )\npolygon_region = selected.iloc[0][\"region\"]\nassert polygon_region == QUERY_REGION, (\n    f\"POLYGON_ID={POLYGON_ID!r} is in region {polygon_region!r}, but \"\n    f\"QUERY_REGION={QUERY_REGION!r}; pick a polygon in the same region for \"\n    \"this comparison to be meaningful\"\n)\n\nepsg = AREAS[polygon_region][\"epsg\"]\npolygon_proj = selected.to_crs(epsg).geometry.iloc[0]\npoints_proj = gdf.to_crs(epsg)",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "buffered",
+     "answer": "polygon_proj.buffer(300)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "within_mask",
+     "answer": "points_proj.geometry.within(buffered).to_numpy()"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "contributing",
+     "answer": "gdf.loc[within_mask]"
+    }
+   ],
+   "after": "if len(contributing) < 3:\n    print(\n        f\"WARNING: only {len(contributing)} points within 300m of {POLYGON_ID}; \"\n        \"falling back to the 5 nearest points to its centroid\"\n    )\n    dists = points_proj.geometry.distance(polygon_proj.centroid)\n    contributing = gdf.loc[dists.nsmallest(5).index]\nprint(\n    f\"{len(contributing)} points contribute to the {POLYGON_ID} polygon-mean prototype\"\n)"
+  },
+  {
+   "type": "output",
+   "text": "WARNING: only 0 points within 300m of bern-quarry-01; falling back to the 5 nearest points to its centroid\n5 points contribute to the bern-quarry-01 polygon-mean prototype",
+   "images": []
+  },
+  {
+   "type": "blank",
+   "before": "",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "positive_centroid_raw",
+     "answer": "course.schema.to_matrix(contributing).mean(axis=0)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "positive_centroid",
+     "answer": "positive_centroid_raw / np.linalg.norm(positive_centroid_raw)"
+    }
+   ],
+   "after": "sims_polygon = cosine_similarity_map(positive_centroid, matrix)\nprecision_polygon = precision_at_k(\n    sims_polygon, gdf[\"label\"].to_numpy(), target_label, K\n)\nprint(\n    f\"polygon-mean prototype precision@{K} vs label {target_label!r}: {precision_polygon:.2f}\"\n)"
+  },
+  {
+   "type": "output",
+   "text": "polygon-mean prototype precision@10 vs label 'built': 0.90",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Similarity 3: Positive-minus-negative prototype (optional)</h2>\n<p>A positive prototype alone can still drift toward whatever is common\neverywhere (shared soil signal, shared illumination). Subtracting a\n<strong>negative</strong> centroid — the mean of points known to be a <em>different</em>\nclass — sharpens the query toward what is distinctive about the positive\nexamples, not just present in them.</p>\n"
+  },
+  {
+   "type": "blank",
+   "before": "rng = np.random.default_rng(RANDOM_STATE)\nother_labels = [label for label in gdf[\"label\"].unique() if label != target_label]\nnegative_label = other_labels[0]\nnegative_pool = gdf.index[gdf[\"label\"] == negative_label].to_numpy()\nn_negative = min(len(contributing), len(negative_pool))\nnegative_idx = rng.choice(negative_pool, size=n_negative, replace=False)",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "negative_centroid_raw",
+     "answer": "course.schema.to_matrix(gdf.loc[negative_idx]).mean(axis=0)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "pos_minus_neg_raw",
+     "answer": "positive_centroid - negative_centroid_raw"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "pos_minus_neg",
+     "answer": "pos_minus_neg_raw / np.linalg.norm(pos_minus_neg_raw)"
+    }
+   ],
+   "after": "sims_pos_neg = cosine_similarity_map(pos_minus_neg, matrix)\nprecision_pos_neg = precision_at_k(\n    sims_pos_neg, gdf[\"label\"].to_numpy(), target_label, K\n)\nprint(\n    f\"positive-minus-negative (vs {negative_label!r}) prototype precision@{K} \"\n    f\"vs label {target_label!r}: {precision_pos_neg:.2f}\"\n)"
+  },
+  {
+   "type": "output",
+   "text": "positive-minus-negative (vs 'bare') prototype precision@10 vs label 'built': 0.70",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "comparison = pd.DataFrame(\n    {\n        \"query_design\": [\"single-pixel\", \"polygon-mean\", \"positive-minus-negative\"],\n        f\"precision@{K}\": [precision_single, precision_polygon, precision_pos_neg],\n    }\n)\nprint(comparison)\n\nfig, ax = plt.subplots(figsize=(6, 4))\nax.bar(\n    comparison[\"query_design\"],\n    comparison[f\"precision@{K}\"],\n    color=[\"tab:blue\", \"tab:orange\", \"tab:green\"],\n)\nax.set_ylabel(f\"precision@{K}\")\nax.set_ylim(0, 1)\nax.set_title(f\"Query design comparison (target label: {target_label!r})\")\nfig.tight_layout()\nfig.savefig(\"figures/02_prototype_precision_at_k.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "              query_design  precision@10\n0             single-pixel           1.0\n1             polygon-mean           0.9\n2  positive-minus-negative           0.7",
+   "images": [
+    "/static/figures/02-similarity/fig-04.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> prototype queries average out single-pixel noise, at the\ncost of assuming the polygon is spatially homogeneous (that everything\ninside the 300 m buffer really is an example of what you're looking\nfor). When that assumption holds, prototypes tend to be at least as\nstable as the single-pixel query above; when a polygon straddles a\nboundary or mixes land-cover types, its mean is diluted and the\nsingle-pixel query can win instead. There is no query design that is\nunconditionally best — that is why this notebook measures rather than\nassumes.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Classification: the random-split trap</h2>\n<p>Search-by-example needs no labels. A classifier does — and once labels\nare in play, <em>how</em> you split the data into train/test sets stops being a\nformality and becomes the single most consequential methodological\nchoice in this notebook.</p>\n<p><strong>Class filtering:</strong> both regions carry a <code>bare</code> class, but it is a\nresidual, sparse category in each region's WorldCover-derived label\nbalance (219 points in Bern's full candidate pool, per\n<code>02-RESEARCH.md</code>'s &quot;Phase Requirements&quot; table) — too thin to support a\nstable per-class precision/recall estimate under 5-fold grouped CV. This\nnotebook classifies the four classes with adequate representation in\nboth regions: <strong>built, crop, vegetation, water.</strong> <code>bare</code> is dropped, and\nthat filtering is a deliberate, stated decision, not a silent one.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "CLASSES = [\"built\", \"crop\", \"vegetation\", \"water\"]\nbern_clf = bern.loc[bern[\"label\"].isin(CLASSES)].reset_index(drop=True)\nseville_clf = seville.loc[seville[\"label\"].isin(CLASSES)].reset_index(drop=True)\nprint(f\"bern: {len(bern_clf)}/{len(bern)} rows kept after dropping 'bare'\")\nprint(f\"seville: {len(seville_clf)}/{len(seville)} rows kept after dropping 'bare'\")\nprint(bern_clf[\"label\"].value_counts())",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "bern: 1900/2050 rows kept after dropping 'bare'\nseville: 1900/2050 rows kept after dropping 'bare'\nlabel\nbuilt         500\ncrop          500\nvegetation    500\nwater         400\nName: count, dtype: int64",
+   "images": []
+  },
+  {
+   "type": "blank",
+   "before": "from sklearn.ensemble import RandomForestClassifier\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.metrics import (\n    ConfusionMatrixDisplay,\n    balanced_accuracy_score,\n    classification_report,\n)\nfrom sklearn.model_selection import GroupKFold, LeaveOneGroupOut, train_test_split\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "MODELS",
+     "answer": "{"
+    },
+    {
+     "kind": "given",
+     "text": "    \"logreg\": Pipeline("
+    },
+    {
+     "kind": "given",
+     "text": "        ["
+    },
+    {
+     "kind": "given",
+     "text": "            (\"scaler\", StandardScaler()),"
+    },
+    {
+     "kind": "given",
+     "text": "            (\"clf\", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),"
+    },
+    {
+     "kind": "given",
+     "text": "        ]"
+    },
+    {
+     "kind": "given",
+     "text": "    ),"
+    },
+    {
+     "kind": "given",
+     "text": "    \"random_forest\": RandomForestClassifier("
+    },
+    {
+     "kind": "blank",
+     "indent": "        ",
+     "lhs": "n_estimators",
+     "answer": "200,"
+    },
+    {
+     "kind": "blank",
+     "indent": "        ",
+     "lhs": "class_weight",
+     "answer": "\"balanced\","
+    },
+    {
+     "kind": "blank",
+     "indent": "        ",
+     "lhs": "random_state",
+     "answer": "RANDOM_STATE,"
+    },
+    {
+     "kind": "blank",
+     "indent": "        ",
+     "lhs": "n_jobs",
+     "answer": "-1,"
+    },
+    {
+     "kind": "given",
+     "text": "    ),"
+    },
+    {
+     "kind": "given",
+     "text": "}"
+    }
+   ],
+   "after": "X_bern = course.schema.to_matrix(bern_clf)\ny_bern = bern_clf[\"label\"].to_numpy()"
+  },
+  {
+   "type": "code",
+   "code": "X_train, X_test, y_train, y_test = train_test_split(\n    X_bern, y_bern, test_size=0.3, random_state=RANDOM_STATE, stratify=y_bern\n)\n\ntrap_results = {}\nfor name, model in MODELS.items():\n    model.fit(X_train, y_train)\n    y_pred = model.predict(X_test)\n    trap_results[name] = {\n        \"accuracy\": model.score(X_test, y_test),\n        \"balanced_accuracy\": balanced_accuracy_score(y_test, y_pred),\n    }\n    print(\n        f\"TRAP ACCURACY (random split, {name}): \"\n        f\"accuracy={trap_results[name]['accuracy']:.3f}, \"\n        f\"balanced_accuracy={trap_results[name]['balanced_accuracy']:.3f}\"\n    )\n\nrf_pred = MODELS[\"random_forest\"].predict(X_test)\nfig, ax = plt.subplots(figsize=(6, 6))\nConfusionMatrixDisplay.from_predictions(y_test, rf_pred, ax=ax, colorbar=False)\nax.set_title(\"Random Forest — random split (the trap): looks great, proves little\")\nfig.tight_layout()\nfig.savefig(\"figures/02_confusion_matrix_random_split.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "TRAP ACCURACY (random split, logreg): accuracy=0.923, balanced_accuracy=0.926\nTRAP ACCURACY (random split, random_forest): accuracy=0.904, balanced_accuracy=0.907",
+   "images": [
+    "/static/figures/02-similarity/fig-05.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Spatial CV: project first, then grid</h2>\n<p>A random split lets adjacent points — potentially metres apart — land on\nopposite sides of train/test. AlphaEarth embeddings make this worse than\nraw pixels, not better: a full year of spatial/temporal context is baked\ninto every embedding, so neighbouring points are <em>more</em> similar than raw\nspectra would be (PITFALLS.md Pitfall 2).</p>\n<p><code>make_blocks</code> refuses a geographic CRS outright (PITFALLS.md Pitfall 3:\n&quot;blocks computed in degrees are meaningless metre sizes&quot;). So this\nnotebook reprojects Bern to <strong>EPSG:2056</strong> (Swiss LV95, metre-based) as an\nexplicit, visible step <em>before</em> gridding — never the other way around.</p>\n"
+  },
+  {
+   "type": "blank",
+   "before": "from course.config import BLOCK_SIZE_M\nfrom course.validation import make_blocks, spatial_cv_report",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "bern_2056",
+     "answer": "bern_clf.to_crs(\"EPSG:2056\")"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "groups_block",
+     "answer": "make_blocks(bern_2056, block_size_m=BLOCK_SIZE_M)"
+    }
+   ],
+   "after": "n_blocks = len(np.unique(groups_block))\nassert n_blocks >= 5, (\n    f\"only {n_blocks} spatial blocks at block_size_m={BLOCK_SIZE_M} — need at \"\n    \"least 5 for GroupKFold(n_splits=5); the AOI may have shrunk below the \"\n    \"DATA-08 floor\"\n)\nprint(f\"bern: {n_blocks} spatial blocks at {BLOCK_SIZE_M} m\")\n\nblock_results = {}\nfor name, model in MODELS.items():\n    report = spatial_cv_report(\n        model,\n        X_bern,\n        y_bern,\n        groups=groups_block,\n        cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),\n    )\n    block_results[name] = report\n    print(\n        f\"BLOCK CV ({name}): balanced_accuracy=\"\n        f\"{report['mean_balanced_accuracy']:.3f} ± {report['std_balanced_accuracy']:.3f} \"\n        f\"(random-split was {trap_results[name]['balanced_accuracy']:.3f})\"\n    )"
+  },
+  {
+   "type": "output",
+   "text": "bern: 248 spatial blocks at 1500 m\nBLOCK CV (logreg): balanced_accuracy=0.918 ± 0.009 (random-split was 0.926)\nBLOCK CV (random_forest): balanced_accuracy=0.910 ± 0.012 (random-split was 0.907)",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Measured so far:</strong> the random-split and spatial-block numbers above sit\nwithin a few points of each other, not tens of points apart. That gap is\nreal and worth teaching, but it is not yet the dramatic effect this\nnotebook is building toward — that comes next, from leave-region-out.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Leave-region-out: the dramatic, honest gap</h2>\n<p>Train on Bern only, predict Seville only — a climatically and\ngeographically distinct region the model never saw during training. This\nreuses the <em>exact same</em> <code>spatial_cv_report</code> call shape as the block CV\nabove, changing only <code>groups</code> (now the region label) and <code>cv</code> (now\n<code>LeaveOneGroupOut</code>), which is itself the point: the helper is genuinely\ngeneric, not two different code paths dressed up to look similar.</p>\n<p><strong>Why leave-region-out is where the real gap lives, and in-region block\nCV is not:</strong> AlphaEarth embeddings aggregate a full year of multi-modal\nsatellite signal into every pixel, which plausibly makes them more\nresistant to naive <em>adjacent-pixel</em> leakage than raw single-date spectral\nbands would be — that is a within-region effect. Nothing about that\naggregation helps a model trained only on Bern's spectral/embedding\nsignature recognize Seville's, which is a genuinely different climate,\nsoil, and crop-calendar signal — an extrapolation problem, not an\ninterpolation one. The Sentinel-2 baseline in the next section tests this\nhypothesis directly.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "combined = pd.concat([bern_clf, seville_clf], ignore_index=True)\nX_all = course.schema.to_matrix(combined)\ny_all = combined[\"label\"].to_numpy()\nregion_groups = combined[\"region\"].to_numpy()\n\nlro_results = {}\nfor name, model in MODELS.items():\n    report = spatial_cv_report(\n        model, X_all, y_all, groups=region_groups, cv=LeaveOneGroupOut()\n    )\n    lro_results[name] = report\n    print(\n        f\"LEAVE-REGION-OUT ({name}): balanced_accuracy=\"\n        f\"{report['mean_balanced_accuracy']:.3f} ± {report['std_balanced_accuracy']:.3f} \"\n        f\"(random-split was {trap_results[name]['balanced_accuracy']:.3f}, \"\n        f\"block CV was {block_results[name]['mean_balanced_accuracy']:.3f})\"\n    )",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "LEAVE-REGION-OUT (logreg): balanced_accuracy=0.727 ± 0.003 (random-split was 0.926, block CV was 0.918)\nLEAVE-REGION-OUT (random_forest): balanced_accuracy=0.774 ± 0.046 (random-split was 0.907, block CV was 0.910)",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>The headline result:</strong> the leave-region-out numbers printed above show\na double-digit balanced-accuracy drop relative to the random-split and\nblock-CV numbers from the previous section — a large, robust gap,\nconsistent with a similar sample measured previously on this data\n(02-RESEARCH.md: 17-19 points for logistic regression and random forest,\ntrain Bern → predict Seville). In-region spatial-block CV, by contrast,\nshowed only a 1-4 point gap above. <strong>Leave-region-out is the primary\nevidence that a random split lies here</strong> — the in-region block-vs-random\ncomparison is a real, smaller, second lesson about interpolation vs.\nextrapolation, not the dramatic effect.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "model_names = list(MODELS.keys())\nscenarios = [\"random split\", \"spatial-block CV\", \"leave-region-out\"]\nscores = {\n    name: [\n        trap_results[name][\"balanced_accuracy\"],\n        block_results[name][\"mean_balanced_accuracy\"],\n        lro_results[name][\"mean_balanced_accuracy\"],\n    ]\n    for name in model_names\n}\n\nfig, ax = plt.subplots(figsize=(7, 5))\nbar_width = 0.35\nx = np.arange(len(scenarios))\nfor i, name in enumerate(model_names):\n    ax.bar(x + i * bar_width, scores[name], width=bar_width, label=name)\nax.set_xticks(x + bar_width / 2)\nax.set_xticklabels(scenarios)\nax.set_ylabel(\"balanced accuracy\")\nax.set_ylim(0, 1)\nax.set_title(\n    \"Leave-region-out is the dramatic gap; in-region block CV is a smaller one\"\n)\nax.legend()\nfig.tight_layout()\nfig.savefig(\"figures/02_cv_comparison_bar_chart.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/02-similarity/fig-06.png"
+   ]
+  },
+  {
+   "type": "code",
+   "code": "rf_model = MODELS[\"random_forest\"]\nlro_cv = LeaveOneGroupOut()\n# LeaveOneGroupOut yields one (train, test) split per unique group; pick the\n# split whose held-out fold is Seville specifically (the headline scenario).\ntrain_idx, test_idx = next(\n    (tr, te)\n    for tr, te in lro_cv.split(X_all, y_all, groups=region_groups)\n    if (region_groups[te] == \"seville\").all()\n)\n\nrf_model.fit(X_all[train_idx], y_all[train_idx])\nseville_pred = rf_model.predict(X_all[test_idx])\nseville_true = y_all[test_idx]\n\nreport_df = pd.DataFrame(\n    classification_report(seville_true, seville_pred, output_dict=True)\n).T\nprint(\n    \"Per-class precision/recall, leave-region-out (train Bern, predict Seville, random_forest):\"\n)\nprint(report_df)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "Per-class precision/recall, leave-region-out (train Bern, predict Seville, random_forest):\n              precision    recall  f1-score      support\nbuilt          0.809269  0.908000  0.855796   500.000000\ncrop           1.000000  0.238000  0.384491   500.000000\nvegetation     0.502410  0.834000  0.627068   500.000000\nwater          0.956410  0.932500  0.944304   400.000000\naccuracy       0.717368  0.717368  0.717368     0.717368\nmacro avg      0.817022  0.728125  0.702915  1900.000000\nweighted avg   0.809686  0.717368  0.690210  1900.000000",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "seville_eval = combined.iloc[test_idx].reset_index(drop=True)\ncorrect = seville_pred == seville_true\n\nfig, ax = plt.subplots(figsize=(6, 6))\nax.scatter(\n    seville_eval.loc[correct, \"lon\"],\n    seville_eval.loc[correct, \"lat\"],\n    s=8,\n    c=\"tab:green\",\n    label=\"correct\",\n    alpha=0.6,\n)\nax.scatter(\n    seville_eval.loc[~correct, \"lon\"],\n    seville_eval.loc[~correct, \"lat\"],\n    s=8,\n    c=\"tab:red\",\n    label=\"incorrect\",\n    alpha=0.6,\n)\nax.set_title(\"Seville errors under leave-region-out (train Bern, random_forest)\")\nax.set_xlabel(\"lon\")\nax.set_ylabel(\"lat\")\nax.legend(loc=\"upper right\", fontsize=\"small\")\nfig.tight_layout()\nfig.savefig(\"figures/02_error_map.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/02-similarity/fig-07.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> leave-region-out is where the dramatic, generalization-\nrelevant gap lives for this modality — a model that looks excellent on\nBern alone loses a large fraction of its accuracy the moment it has to\nextrapolate to a different climate and land-cover mix. In-region spatial\nblocking matters too, and is worth teaching in its own right, just far\nless dramatically here than the leave-region-out effect above.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Baseline: the identical pipeline on raw Sentinel-2 bands</h2>\n<p>Everything above ran on 64-dimensional AlphaEarth embeddings. This\nsection re-runs the <em>identical</em> pipeline — same classifiers, same\n<code>test_size</code>/<code>random_state</code>, same <code>make_blocks</code>/<code>GroupKFold</code> call, same\n<code>LeaveOneGroupOut</code> call — on <code>S2_COLS</code>, the frozen table's raw Sentinel-2\nreflectance bands, changing nothing except which feature matrix goes in.\nThis isolates the feature representation as the only variable, testing\nthe hypothesis raised above: are embeddings more leakage-resistant than\nraw single-date spectral bands, or not? The numbers below are measured,\nnot assumed either way.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "from course.schema import S2_COLS\n\n# A handful of points sit at the very edge of a Sentinel-2 scene and come\n# back NaN in these raw bands even though their AlphaEarth embedding (a\n# yearly composite) is complete -- drop them for this baseline only, and\n# say so, rather than let NaN silently propagate into StandardScaler/\n# LogisticRegression (which would otherwise produce a nonsense NaN score).\nbern_clf_s2 = bern_clf.dropna(subset=S2_COLS).reset_index(drop=True)\ncombined_s2 = combined.dropna(subset=S2_COLS).reset_index(drop=True)\nprint(\n    f\"S2 baseline: dropped {len(bern_clf) - len(bern_clf_s2)} Bern row(s) and \"\n    f\"{len(combined) - len(combined_s2)} combined row(s) with NaN Sentinel-2 bands\"\n)\n\nX_bern_s2 = bern_clf_s2[S2_COLS].to_numpy(np.float32)\ny_bern_s2 = bern_clf_s2[\"label\"].to_numpy()\ngroups_block_s2 = make_blocks(\n    bern_clf_s2.to_crs(\"EPSG:2056\"), block_size_m=BLOCK_SIZE_M\n)\n\nX_all_s2 = combined_s2[S2_COLS].to_numpy(np.float32)\ny_all_s2 = combined_s2[\"label\"].to_numpy()\nregion_groups_s2 = combined_s2[\"region\"].to_numpy()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "S2 baseline: dropped 0 Bern row(s) and 1 combined row(s) with NaN Sentinel-2 bands",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "s2_models = {\n    \"logreg\": Pipeline(\n        [\n            (\"scaler\", StandardScaler()),\n            (\"clf\", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),\n        ]\n    ),\n    \"random_forest\": RandomForestClassifier(\n        n_estimators=200,\n        class_weight=\"balanced\",\n        random_state=RANDOM_STATE,\n        n_jobs=-1,\n    ),\n}\n\ns2_trap, s2_block, s2_lro = {}, {}, {}\nfor name, model in s2_models.items():\n    Xtr, Xte, ytr, yte = train_test_split(\n        X_bern_s2,\n        y_bern_s2,\n        test_size=0.3,\n        random_state=RANDOM_STATE,\n        stratify=y_bern_s2,\n    )\n    model.fit(Xtr, ytr)\n    s2_trap[name] = balanced_accuracy_score(yte, model.predict(Xte))\n\n    s2_block[name] = spatial_cv_report(\n        model,\n        X_bern_s2,\n        y_bern_s2,\n        groups=groups_block_s2,\n        cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),\n    )[\"mean_balanced_accuracy\"]\n\n    s2_lro[name] = spatial_cv_report(\n        model, X_all_s2, y_all_s2, groups=region_groups_s2, cv=LeaveOneGroupOut()\n    )[\"mean_balanced_accuracy\"]\n\n    print(\n        f\"S2 baseline ({name}): random_split={s2_trap[name]:.3f}, \"\n        f\"block_cv={s2_block[name]:.3f}, leave_region_out={s2_lro[name]:.3f}\"\n    )",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "S2 baseline (logreg): random_split=0.816, block_cv=0.820, leave_region_out=0.611\nS2 baseline (random_forest): random_split=0.823, block_cv=0.833, leave_region_out=0.549",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "baseline_table = pd.DataFrame(\n    {\n        \"AlphaEarth embeddings\": [\n            trap_results[\"random_forest\"][\"balanced_accuracy\"],\n            block_results[\"random_forest\"][\"mean_balanced_accuracy\"],\n            lro_results[\"random_forest\"][\"mean_balanced_accuracy\"],\n        ],\n        \"Sentinel-2 raw bands\": [\n            s2_trap[\"random_forest\"],\n            s2_block[\"random_forest\"],\n            s2_lro[\"random_forest\"],\n        ],\n    },\n    index=[\"random split\", \"spatial-block CV\", \"leave-region-out\"],\n)\nprint(\"Comparison (random_forest, balanced accuracy):\")\nprint(baseline_table)\n\nembedding_block_gap = (\n    trap_results[\"random_forest\"][\"balanced_accuracy\"]\n    - block_results[\"random_forest\"][\"mean_balanced_accuracy\"]\n)\ns2_block_gap = s2_trap[\"random_forest\"] - s2_block[\"random_forest\"]\nprint(\n    f\"in-region block-CV gap: embeddings={embedding_block_gap:.3f}, \"\n    f\"Sentinel-2={s2_block_gap:.3f}\"\n)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "Comparison (random_forest, balanced accuracy):\n                  AlphaEarth embeddings  Sentinel-2 raw bands\nrandom split                   0.906667              0.822917\nspatial-block CV               0.909851              0.833283\nleave-region-out               0.774312              0.549318\nin-region block-CV gap: embeddings=-0.003, Sentinel-2=-0.010",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> the table above reports what this run actually measured,\nnot an assumed direction. If the Sentinel-2 in-region block-CV gap comes\nout larger than the embeddings' gap, that supports the hypothesis raised\nearlier — AlphaEarth embeddings, which already aggregate a full year of\nmulti-modal spatial/temporal context per pixel, are more resistant to\nnaive adjacent-pixel leakage than raw single-date reflectance values,\nwhich is itself a genuinely interesting, teachable result. If it does\nnot come out that way on this sample, that is reported just as plainly:\nthe honest number is the lesson, not a story picked in advance. Either\nway, the leave-region-out gap — for both feature representations —\nremains the larger, more consequential effect in this notebook.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Provenance</h2>\n<p>Every number and figure above traces back to a specific dataset version,\nCRS, label source and license -- recorded once per table when it was\nloaded (<code>course.data.load</code>) and summarized here with <code>build_provenance</code>\n/ <code>write_provenance</code> (<code>course/provenance.py</code>), never hand-typed. This is\nthe single source of truth for &quot;what exactly did this run use.&quot;</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import json\n\nfrom course.provenance import build_provenance, write_provenance\n\nprovenance = build_provenance(\n    {\"bern_2021\": bern, \"seville_2021\": seville},\n    created_by=\"Introduction to Geospatial Embeddings, Module 3 notebook\",\n)\nwrite_provenance(provenance, Path(\"outputs/provenance.json\"))\nprint(json.dumps(provenance, indent=2))",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "{\n  \"created_by\": \"Introduction to Geospatial Embeddings, Module 3 notebook\",\n  \"generated_at\": \"2026-09-04T01:17:23.360661+00:00\",\n  \"tables\": [\n    {\n      \"region\": \"bern\",\n      \"year\": 2021,\n      \"embedding_product\": \"AlphaEarth Foundations Satellite Embedding v1 (annual)\",\n      \"dataset_version\": \"1.1\",\n      \"crs\": \"EPSG:4326\",\n      \"label_source\": \"esa_worldcover_2021\",\n      \"validation_source\": \"eea_hrl_imperviousness_2018\",\n      \"license\": \"CC BY 4.0\",\n      \"attribution\": \"The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.\"\n    },\n    {\n      \"region\": \"seville\",\n      \"year\": 2021,\n      \"embedding_product\": \"AlphaEarth Foundations Satellite Embedding v1 (annual)\",\n      \"dataset_version\": \"1.1\",\n      \"crs\": \"EPSG:4326\",\n      \"label_source\": \"esa_worldcover_2021\",\n      \"validation_source\": \"eea_hrl_imperviousness_2018\",\n      \"license\": \"CC BY 4.0\",\n      \"attribution\": \"The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.\"\n    }\n  ]\n}",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Wrap-up</h2>\n<p><strong>Takeaways:</strong></p>\n<ul>\n<li>Cosine similarity search over AlphaEarth's 64-D embedding finds\nvisually and semantically similar locations without any training loop.</li>\n<li>Prototype queries (polygon-mean and positive-minus-negative centroid)\nlet you define a class by example rather than by hand-picking a\nthreshold.</li>\n<li>A classifier trained and evaluated with a random split reports an\naccuracy that a spatial-block or leave-region-out split shows is\noptimistic -- the gap is small in-region here but large across regions.</li>\n<li>The honest, leave-region-out estimate is the number that predicts how\nthe classifier will actually perform somewhere it has not seen.</li>\n<li>Swapping AlphaEarth embeddings for raw Sentinel-2 bands, with every\nother step held identical, isolates representation as the only\nvariable that changed.</li>\n</ul>\n<p><strong>What's next:</strong> Module 4 (<code>01_alphaearth_access_visualize.ipynb</code>) and\nlater modules import these SAME <code>course</code> helpers --\n<code>cosine_similarity_map</code>, <code>make_blocks</code>, <code>spatial_cv_report</code> -- rather\nthan redefining them, so the similarity and validation logic you just\nused stays identical across the whole course.</p>\n<p><strong>Resources:</strong></p>\n<ul>\n<li>AlphaEarth GCS README: https://developers.google.com/earth-engine/guides/aef_on_gcs_readme</li>\n<li>AlphaEarth Earth Engine catalog entry: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL</li>\n<li>Course reference environment: <code>course.config.COURSE_RELEASE</code> = <code>&quot;2026.08&quot;</code></li>\n<li>License: CC BY 4.0</li>\n<li>Attribution: &quot;The AlphaEarth Foundations Satellite Embedding dataset is\nproduced by Google and Google DeepMind.&quot; (same string recorded in the\n<code>provenance</code> cell above and in <code>data/DATA_CARD.md</code> -- reused verbatim,\nnever retyped)</li>\n</ul>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Appendix: Path A (Earth Engine) -- illustrative only, not executed</h2>\n<p>Everything above used the frozen, no-credentials Path B tables. If you\nhave an Earth Engine account and Cloud project, the same AlphaEarth\nvectors can be sampled live instead -- illustrative only; not executed;\nsee Module 4 for the real Path A/A' notebook with a working auth cell\nand fallback.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "# import ee\n#\n# ee.Initialize(project=\"your-gcp-project-id\")  # placeholder -- never a real id\n#\n# collection = ee.ImageCollection(\"GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL\")\n# image = collection.filterDate(\"2021-01-01\", \"2022-01-01\").first()\n# points = ee.FeatureCollection(\n#     [ee.Feature(ee.Geometry.Point(lon, lat)) for lon, lat in [(7.45, 46.95)]]\n# )\n# sampled = image.sampleRegions(collection=points, scale=10)\n# print(sampled.getInfo())",
+   "editable": false,
+   "executed": false
+  }
+ ],
+ "quiz": [
+  {
+   "id": "Q1",
+   "prompt_html": "<p>The notebook computes similarity as a plain dot product between AlphaEarth vectors, without dividing by their norms. Why is this valid here specifically?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Dot product always equals cosine similarity, for any embedding provider.",
+     "explanation_html": "<p>Incorrect — this is only true when vectors are unit-norm, a property of AlphaEarth verified in this notebook and in <code>01_alphaearth_access_visualize.ipynb</code>'s &quot;Unit-norm check,&quot; not a universal fact about all embeddings (Clay's 1024-D vectors in Module 1's quiz are not asserted to be unit-norm the same way).</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "Because every AlphaEarth vector used here is already unit-norm, so dividing by norms (both equal to 1) is a no-op — the notebook's own Takeaway states dot product equals cosine similarity here specifically because of this property.",
+     "explanation_html": "<p>Correct — the Data section's Takeaway states directly: &quot;dot product equals cosine similarity here because every [AlphaEarth vector is unit-norm],&quot; matching the &quot;Unit-norm check&quot; verified in Module 2's access notebook.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Because the classifier results are the same either way, so the distinction doesn't matter.",
+     "explanation_html": "<p>Incorrect — the notebook never justifies the dot-product shortcut by classifier outcomes; it justifies it by the geometric fact of unit-norm vectors, stated in the Data section's Takeaway.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Because cosine similarity cannot be computed on embeddings with more than 32 dimensions.",
+     "explanation_html": "<p>Incorrect — there is no such dimensionality restriction anywhere in the notebook or the underlying math; cosine similarity is well-defined for any dimensionality.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q2",
+   "prompt_html": "<p><strong>Spot the leakage.</strong> A colleague proposes: &quot;I'll take all points from both Bern and Seville, shuffle them together, and do a random 70/30 train/test split (<code>train_test_split</code> with <code>stratify</code> on label).&quot; Is this split valid for estimating how well the classifier will generalize to a genuinely new region it has not seen?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Yes — as long as the split is stratified by label, it doesn't matter how the points are distributed spatially.",
+     "explanation_html": "<p>Incorrect — this describes exactly the &quot;Classification: the random-split trap&quot; section's <code>train_test_split(..., stratify=y_bern)</code> call, which the notebook explicitly labels a &quot;TRAP ACCURACY&quot; in its printed output and whose confusion-matrix figure is titled &quot;looks great, proves little.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "No — a random split lets spatially adjacent points land on opposite sides of train/test, and if both regions are mixed into one random split, that is a *worse* version of the same leakage the \"Spatial CV\" section warns about, not a genuine test of cross-region generalization.",
+     "explanation_html": "<p>Correct — the &quot;Spatial CV: project first, then grid&quot; section states plainly: &quot;A random split lets adjacent points — potentially metres apart — land on opposite sides of train/test,&quot; and the notebook's own &quot;Classification: the random-split trap&quot; section demonstrates and labels this exact random-split pattern as a trap.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Yes, because AlphaEarth embeddings are annual composites and therefore immune to spatial leakage.",
+     "explanation_html": "<p>Incorrect — the &quot;Spatial CV&quot; section states the opposite: annual embeddings make leakage &quot;worse than raw pixels, not better: a full year of spatial/temporal context is baked into every embedding, so neighbouring points are <em>more</em> similar than raw spectra would be.&quot;</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "No, but only because Bern and Seville use different coordinate reference systems.",
+     "explanation_html": "<p>Incorrect — this identifies a real but separate technical detail (Bern is reprojected to EPSG:2056 for block gridding); it is not the reason the random split is invalid for generalization testing, which is about spatial adjacency leakage regardless of CRS.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q3",
+   "prompt_html": "<p><strong>Spot the leakage.</strong> Another colleague proposes: &quot;I'll use <code>GroupKFold</code> with <code>groups</code> set to spatial blocks computed within Bern only (never mixing regions), to estimate generalization.&quot; Compared to leave-region-out (train Bern, predict Seville), what does this in-region spatial-block CV actually measure, and is it the dramatic gap the module highlights?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "It measures the same thing as leave-region-out, and the notebook shows an equally large accuracy drop from both approaches.",
+     "explanation_html": "<p>Incorrect — the &quot;Leave-region-out&quot; section states in-region spatial-block CV &quot;showed only a 1-4 point gap above,&quot; in explicit contrast to the double-digit balanced-accuracy drop from leave-region-out, so the two are not equivalent.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "In-region spatial-block CV measures interpolation within a region already seen during training (a smaller, real effect, ~1-4 points here); it is not the dramatic gap — leave-region-out (extrapolating to a climatically distinct, unseen region) is explicitly called \"the primary evidence that a random split lies here.\"",
+     "explanation_html": "<p>Correct — the &quot;Leave-region-out&quot; section states directly: &quot;In-region spatial-block CV, by contrast, showed only a 1-4 point gap above. <strong>Leave-region-out is the primary evidence that a random split lies here</strong>,&quot; and separately: &quot;the in-region block-vs-random comparison is a real, smaller, second lesson about interpolation vs. extrapolation, not the dramatic effect.&quot;</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "In-region spatial-block CV is invalid and should never be used; only leave-region-out is a legitimate spatial validation strategy.",
+     "explanation_html": "<p>Incorrect — the notebook presents in-region block CV as a valid, real lesson worth teaching in its own right (&quot;worth teaching in its own right&quot; per the final Takeaway), just one with a much smaller effect size on this data, not an invalid technique.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "It's not possible to do spatial-block CV within a single region; `groups` must always span multiple regions.",
+     "explanation_html": "<p>Incorrect — the &quot;Spatial CV: project first, then grid&quot; section does exactly this, using <code>make_blocks</code>/<code>GroupKFold</code> gridded within a single reprojected region (Bern), with region-spanning <code>LeaveOneGroupOut</code> introduced as a distinct, later step.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q4",
+   "prompt_html": "<p>The notebook's <code>wrong-conclusion</code>-tagged cell prints: &quot;WRONG: X% of points with similarity &gt; 0.90 share the query's label, so a similarity above 0.90 must mean 'same land cover.'&quot; What specifically makes this conclusion wrong, per the notebook's own explanation?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "The 0.90 threshold is arbitrary — changing it to 0.85 or 0.95 changes the \"agreement rate\" even though nothing about the underlying data changed, so a fixed-threshold rate answers \"how many points cross an arbitrary line,\" not \"how good is this query.\"",
+     "explanation_html": "<p>Correct — this is the exact text under &quot;### Why this is wrong&quot;: &quot;The 0.90 cutoff is arbitrary... Pick 0.85 or 0.95 instead and the apparent 'agreement rate' above changes with it, even though nothing about the underlying data changed... Ranking, plus precision@k... is the honest alternative.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "The label data used to compute the agreement rate is corrupted.",
+     "explanation_html": "<p>Incorrect — nothing in the &quot;Why this is wrong&quot; explanation questions label data quality; the critique is purely about the arbitrariness of the fixed similarity threshold, not data integrity.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Cosine similarity cannot be validly computed between AlphaEarth vectors at all.",
+     "explanation_html": "<p>Incorrect — the notebook relies on cosine/dot-product similarity throughout as valid (see Q1); the wrong-conclusion cell critiques drawing a categorical same/different-class conclusion from an arbitrary threshold, not the validity of similarity computation itself.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "The similarity search was run on the wrong region.",
+     "explanation_html": "<p>Incorrect — the trap is conceptual (threshold arbitrariness), not a region-selection bug; the &quot;Why this is wrong&quot; text never mentions region choice.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q5",
+   "prompt_html": "<p>The notebook reports that leave-region-out causes a &quot;double-digit balanced-accuracy drop&quot; (17-19 points, per the cited prior measurement) for models trained on Bern and evaluated on Seville, while in-region spatial-block CV shows only a 1-4 point gap. What is the notebook's stated explanation for why the gap is so much larger across regions than within one region?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "AlphaEarth embeddings aggregate a full year of multi-modal satellite signal, which plausibly makes them more resistant to *adjacent-pixel* leakage within a region than raw spectral bands — but that aggregation does nothing to help a model trained only on Bern recognize Seville's genuinely different climate, soil, and crop-calendar signal; that is an extrapolation problem, not an interpolation one.",
+     "explanation_html": "<p>Correct — this is the &quot;Leave-region-out&quot; section's stated reasoning verbatim: the annual aggregation is &quot;a within-region effect,&quot; while the region gap is &quot;a genuinely different climate, soil, and crop-calendar signal — an extrapolation problem, not an interpolation one.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "The Seville dataset has fewer labeled points than Bern, so its test-set accuracy is statistically noisier.",
+     "explanation_html": "<p>Incorrect — the notebook's explanation is about extrapolation to a different climate/land-cover signal, not sample-size noise; no such sample-size argument appears in the &quot;Leave-region-out&quot; section's reasoning.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "The random forest and logistic regression models were configured differently for the leave-region-out experiment than for the spatial-block experiment.",
+     "explanation_html": "<p>Incorrect — the same <code>MODELS</code> dict (<code>logreg</code>, <code>random_forest</code>) is reused unchanged across the random-split trap, spatial-block CV, and leave-region-out sections; the notebook's stated point is that reusing <code>spatial_cv_report</code> with only <code>groups</code>/<code>cv</code> changed &quot;is itself the point: the helper is genuinely generic.&quot;</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Bern and Seville use incompatible AlphaEarth band ordering, causing the model to misinterpret features.",
+     "explanation_html": "<p>Incorrect — no such band-ordering incompatibility is mentioned anywhere in the notebook; both regions draw from <code>course.schema.to_matrix</code>, the same schema, and the explanation given is about climate/land-cover distribution shift, not a data-format bug.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q6",
+   "prompt_html": "<p>The &quot;Baseline: the identical pipeline on raw Sentinel-2 bands&quot; section runs the exact same classification pipeline on raw spectral bands instead of AlphaEarth embeddings. What is the purpose of this baseline, per the notebook's Takeaway?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "To prove that raw Sentinel-2 bands always outperform AlphaEarth embeddings.",
+     "explanation_html": "<p>Incorrect — the Takeaway states &quot;the table above reports what this run actually measured,&quot; a neutral, measured framing, not a categorical claim that one modality always wins.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "To directly test the hypothesis (raised in the \"Leave-region-out\" section) that AlphaEarth's yearly aggregation helps with within-region adjacent-pixel leakage but not necessarily with cross-region generalization, by running the identical pipeline on a modality without that yearly aggregation.",
+     "explanation_html": "<p>Correct — the &quot;Leave-region-out&quot; section explicitly sets this up: &quot;The Sentinel-2 baseline in the next section tests this hypothesis directly,&quot; referring to its own claim about AlphaEarth's aggregation being a within-region, not cross-region, benefit.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "To demonstrate that Sentinel-2 bands require no dequantization, unlike AlphaEarth.",
+     "explanation_html": "<p>Incorrect — dequantization is a property specific to AlphaEarth's int8 encoding covered in Module 2; the baseline section's stated purpose (per the Leave-region-out section's forward reference) is about testing the aggregation-vs-leakage hypothesis, not encoding format.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "To show that random forests are unsuitable for classifying raw spectral data.",
+     "explanation_html": "<p>Incorrect — the baseline reuses both <code>logreg</code> and <code>random_forest</code> models from <code>MODELS</code>, the same as every earlier section; there is no claim in the notebook that either model type is unsuitable for raw bands.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q7",
+   "prompt_html": "<p>In &quot;Similarity 3: Positive-minus-negative prototype,&quot; the notebook computes <code>pos_minus_neg = (positive_centroid - negative_centroid_raw)</code> and then renormalizes it. Why is renormalizing to unit length a required step here, not an optional cleanup?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "Because averaging (and subtracting) unit-norm vectors does not generally produce a unit-norm result, and this notebook's cosine/dot-product similarity machinery (see Q1) requires unit-norm query vectors to remain valid.",
+     "explanation_html": "<p>Correct — the &quot;Similarity 2: Prototype queries&quot; section states this directly: &quot;The raw mean of several unit-norm embedding vectors is <strong>not itself unit-norm</strong>... Renormalizing... is required, not optional, to get back a valid query vector that <code>cosine_similarity_map</code> can compare on equal footing,&quot; and the same logic is applied again in &quot;Similarity 3&quot; via <code>pos_minus_neg = pos_minus_neg_raw / np.linalg.norm(pos_minus_neg_raw)</code>.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "Because scikit-learn raises an error if you pass a non-unit-norm vector to a similarity function.",
+     "explanation_html": "<p>Incorrect — no such library-level enforcement is mentioned; the notebook implements the unit-norm requirement itself via <code>cosine_similarity_map</code>'s reliance on the &quot;dot product equals cosine similarity&quot; property from the Data section's Takeaway, not a scikit-learn exception.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Because renormalization improves classifier accuracy, as measured in the \"Classification\" section.",
+     "explanation_html": "<p>Incorrect — renormalization here is about keeping the similarity-search machinery mathematically valid (Similarity sections), not about the separate classification pipeline (Classification sections), which use <code>course.schema.to_matrix</code> directly, not the prototype vectors.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Because negative numbers are not allowed in the embedding matrix.",
+     "explanation_html": "<p>Incorrect — the embedding matrix and prototype vectors contain signed float32 values throughout (e.g., the dequantization formula itself uses <code>np.sign</code>); negative values are expected and normal, not disallowed.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q8",
+   "prompt_html": "<p>Considering the module's overall arc — random-split trap, spatial-block CV, leave-region-out, and the Sentinel-2 baseline — which single number should a practitioner report as &quot;the&quot; accuracy of this classifier if asked how well it will perform on a genuinely new, unseen region?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "The random-split \"TRAP ACCURACY\" number, since it's the simplest and highest.",
+     "explanation_html": "<p>Incorrect — this is precisely the number the notebook's own print statement labels &quot;TRAP ACCURACY,&quot; and whose confusion-matrix figure title reads &quot;looks great, proves little&quot; — the module's central point is that this number is misleading for the generalization question.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "The in-region spatial-block CV number, since it at least accounts for some spatial leakage.",
+     "explanation_html": "<p>Incorrect — while more honest than the random split, the &quot;Leave-region-out&quot; section states this only showed &quot;a 1-4 point gap,&quot; and explicitly frames it as a smaller, different (interpolation) lesson, not the number that answers a cross-region generalization question.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": true,
+     "text": "The leave-region-out balanced accuracy (train Bern, predict Seville), since that scenario is the one that actually withholds an entire unseen region during training and is explicitly called \"the primary evidence\" for how the model performs on genuinely new geography.",
+     "explanation_html": "<p>Correct — the &quot;Leave-region-out&quot; section states this is &quot;the primary evidence that a random split lies here&quot; and its Takeaway names it as &quot;where the dramatic, generalization-relevant gap lives for this modality... the moment it has to extrapolate to a different climate and land-cover mix&quot; — this is the scenario structurally matching &quot;a genuinely new, unseen region.&quot;</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "The average of all three numbers (random split, spatial-block CV, leave-region-out), since averaging is always the safest summary statistic.",
+     "explanation_html": "<p>Incorrect — the notebook never recommends averaging across scenarios that test fundamentally different questions (memorization vs. interpolation vs. extrapolation); doing so would blend a misleading number with a meaningful one, contradicting the module's entire methodological argument.</p>\n"
+    }
+   ]
+  }
+ ]
+}

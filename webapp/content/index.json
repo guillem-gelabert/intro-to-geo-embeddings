@@ -1,0 +1,53 @@
+{
+ "modules": [
+  {
+   "slug": "00-refresher",
+   "title": "Module 1: Embedding Refresher",
+   "blocks": 26,
+   "blanks": 0,
+   "quiz": 5
+  },
+  {
+   "slug": "00b-representation",
+   "title": "Module 1: Representations — Pixel, Patch and Location Embeddings",
+   "blocks": 17,
+   "blanks": 1,
+   "quiz": 6
+  },
+  {
+   "slug": "01-access",
+   "title": "Module 2: Accessing and Visualizing AlphaEarth",
+   "blocks": 20,
+   "blanks": 4,
+   "quiz": 5
+  },
+  {
+   "slug": "02-similarity",
+   "title": "Module 3: Similarity Search and Classification",
+   "blocks": 68,
+   "blanks": 6,
+   "quiz": 8
+  },
+  {
+   "slug": "03-change",
+   "title": "Module 4: Change Detection and Validation",
+   "blocks": 50,
+   "blanks": 0,
+   "quiz": 7
+  },
+  {
+   "slug": "04-ecosystems",
+   "title": "Module 5: Embedding Ecosystems",
+   "blocks": 32,
+   "blanks": 0,
+   "quiz": 7
+  },
+  {
+   "slug": "05-capstone",
+   "title": "Module 6: Capstone — Artificialization Pipeline Template",
+   "blocks": 34,
+   "blanks": 0,
+   "quiz": 0
+  }
+ ]
+}

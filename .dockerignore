@@ -1,0 +1,4 @@
+*
+!webapp/
+!pyproject.toml
+webapp/**/__pycache__/

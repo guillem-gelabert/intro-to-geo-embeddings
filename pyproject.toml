@@ -25,6 +25,11 @@ ee = [
     "earthengine-api>=1.7.42",
     "geemap>=0.38.4",
 ]
+web = [
+    "fastapi>=0.121.0",
+    "markdown-it-py>=4.0.0",
+    "uvicorn>=0.40.0",
+]
 providers = [
     "duckdb>=1.5.5",
     "fsspec>=2026.7.0",

@@ -1,0 +1,330 @@
+{
+ "slug": "01-access",
+ "stem": "01_alphaearth_access_visualize",
+ "title": "Module 2: Accessing and Visualizing AlphaEarth",
+ "blocks": [
+  {
+   "type": "prose",
+   "html": "<h2>What you will learn</h2>\n<ol>\n<li>Authenticate to Earth Engine with a project ID</li>\n<li>Load <code>GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL</code> for Bern, 2024, and inspect its 64 bands</li>\n<li>Display three axes as a pseudo-RGB composite with geemap</li>\n<li>Sample and export an embedding table</li>\n<li>(Path B) Reach the same conclusions with the bundled clip and no Earth Engine account</li>\n</ol>\n<table>\n<thead>\n<tr>\n<th>Prerequisite</th>\n<th>Needed?</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Python, NumPy/pandas basics</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td>Earth Engine account</td>\n<td><strong>Optional</strong> (Path A only)</td>\n</tr>\n<tr>\n<td>GIS background</td>\n<td><strong>No</strong></td>\n</tr>\n</tbody>\n</table>\n<p><strong>Time to complete:</strong> ~15 minutes (Path A requires a registered EE\nproject; Path B needs nothing).</p>\n<p>Course reference environment: 2026-08 release. Provider APIs may change.\nEvery cloud notebook has a local/offline fallback.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Path A: Live Earth Engine access (optional, requires a registered project)</h2>\n<p>If you have registered a Google Cloud project for Earth Engine, the\ncell below shows the real, live path: authenticate, load the AlphaEarth\nImageCollection for a Bern AOI in 2024, inspect its bands, display a\npseudo-RGB composite, and sample a table.</p>\n<p><strong>This cell is never executed by this course's automated checks</strong> (it is\ntagged <code>skip-execution</code>, nbclient's default skip tag) because the\nauthor does not hold an Earth Engine account and the CI environment\ndoes not install <code>earthengine-api</code>/<code>geemap</code>. If you have not registered\na project yet, do so at\nhttps://console.cloud.google.com/earth-engine -- current eligibility\ntiers are Community (150 EECU-h/month), Contributor (1,000), and\nPartner (100,000). Set the <code>EE_PROJECT</code> environment variable to your\nown project ID before running this cell interactively; never hardcode\na real project ID or credential in this notebook.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import ee\nimport geemap\n\n# Read the project ID from an environment variable -- never hardcode a\n# real GCP project id here. The placeholder below is intentionally never\n# a working value.\nEE_PROJECT = os.environ.get(\"EE_PROJECT\", \"your-gcp-project-id\")\n\ntry:\n    ee.Initialize(project=EE_PROJECT)\nexcept ee.EEException as exc:\n    print(\n        f\"Earth Engine not available: {exc}. Register a project at \"\n        \"https://console.cloud.google.com/earth-engine and check current \"\n        \"eligibility/quota (Community 150 EECU-h/month, Contributor \"\n        \"1,000, Partner 100,000).\"\n    )\n\n# Bern AOI, matching course.config.AREAS[\"bern\"][\"bbox_4326\"] exactly.\naoi = ee.Geometry.Rectangle(list(AREAS[\"bern\"][\"bbox_4326\"]))\n\n# AlphaEarth catalog id, filtered to 2024 (dataset availability in the EE\n# catalog runs 2017-01-01 through 2025-01-01; the GCS distribution runs\n# through 2025 -- 2024 is chosen deliberately here, not arbitrarily).\nic = (\n    ee.ImageCollection(\"GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL\")\n    .filterDate(\"2024-01-01\", \"2025-01-01\")\n    .filterBounds(aoi)\n)\nimage = ic.first()\n\n# Expect 64 band names A00..A63, and DATASET_VERSION == 1.1.\nprint(image.bandNames().getInfo())\nprint(image.get(\"DATASET_VERSION\").getInfo())\n\n# Display three axes as a pseudo-RGB composite. This is a DISPLAY STRETCH\n# for visualization only, not a physical reflectance range, and the three\n# band indices below are illustrative only -- this notebook makes no\n# claim about what any single axis \"means\"; a caption should read as\n# \"these bands separate these landscape types in this sample\", never as\n# \"band A16 measures vegetation\".\nvis_params = {\"bands\": [\"A01\", \"A16\", \"A09\"], \"min\": -0.3, \"max\": 0.3}\nm = geemap.Map()\nm.centerObject(aoi, 11)\nm.addLayer(image, vis_params, \"AlphaEarth pseudo-RGB (Bern, 2024)\")\nm\n\n# Sample a SMALL region only -- Earth Engine's `getInfo()` aborts a\n# collection query after accumulating over 5,000 elements, and large\n# `sampleRegions()` calls can hit \"User memory limit exceeded\". Here we\n# sample a single point (the AOI centroid) as an illustrative example.\nsample_points = ee.FeatureCollection([ee.Feature(aoi.centroid())])\nsampled = image.sampleRegions(collection=sample_points, scale=10)\nprint(sampled.getInfo())\n\n# To export a real table for a larger AOI, use a batch export task rather\n# than `getInfo()` (which is meant for small, interactive results):\n# task = ee.batch.Export.table.toDrive(\n#     collection=sampled, description=\"alphaearth_bern_2024\", fileFormat=\"CSV\"\n# )\n# task.start()",
+   "editable": false,
+   "executed": false
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Path B: Offline access from the bundled clip (no credentials needed)</h2>\n<p>Path A above requires a registered Earth Engine project. Path B reaches\nthe identical conclusions -- 64-band AlphaEarth embeddings, dequantized\nto unit-norm vectors, displayed as a pseudo-RGB composite, and explored\nwith PCA -- using only <code>data/bern_aef_2024_clip.tif</code>, a small raw int8\nCOG GeoTIFF checked into this repo. No network access, no account, no\nquota.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import json\n\nimport numpy as np\nimport rasterio\nfrom sklearn.decomposition import PCA\n\nfrom course.config import RANDOM_STATE\nfrom course.embeddings import dequantize_aef\n\nwith rasterio.open(\"data/bern_aef_2024_clip.tif\") as ds:\n    raw = ds.read()  # band-first: (64, H, W)\n    crs = ds.crs\n    nodata = ds.nodata\n\nprint(\"raw.shape:\", raw.shape)\nprint(\"raw.dtype:\", raw.dtype)\nprint(\"crs:\", crs)\nprint(\"nodata:\", nodata)\n\nwith open(\"data/bern_aef_2024_clip.provenance.json\") as f:\n    provenance = json.load(f)\nprint(provenance)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "raw.shape: (64, 225, 157)\nraw.dtype: int8\ncrs: EPSG:32632\nnodata: -128.0\n{'embedding_product': 'alphaearth_satellite_embedding', 'dataset_version': '1.1', 'year': 2024, 'extraction_date': '2026-09-03T23:31:57.967403+00:00', 'source_path': 'https://storage.googleapis.com/alphaearth_foundations/satellite_embedding/v1/annual/2024/32N/xlhcaokskggk40mla-0000008192-0000000000.tiff', 'sampling_method': 'single windowed COG read via course.live.aef_cog.read_window, no point sampling, raw int8 not dequantized', 'crs': 'EPSG:32632', 'bbox_4326': [7.44, 46.94, 7.46, 46.96], 'shape': [64, 225, 157], 'license': 'CC BY 4.0', 'attribution': 'The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.', 'created_by': 'pipeline/extract_clip_raster.py'}",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h3>The int8 dequantization formula</h3>\n<p>AlphaEarth ships each band as a signed 8-bit integer, not a float. The\nraw values are NOT a linear encoding of the embedding: recovering the\nreal vector requires</p>\n<p><code>d = (v / 127.5) ** 2 * sign(v)</code></p>\n<p>followed by an L2 renormalization along the band axis. Averaging raw\nint8 values directly -- without this step -- silently corrupts the\ndata, because the quantization is non-linear (see PITFALLS.md Pitfall\n1). <code>course.embeddings.dequantize_aef</code> is the one place this formula\nlives; every consumer in this course imports it rather than\nreimplementing it.</p>\n"
+  },
+  {
+   "type": "blank",
+   "before": "embedded = dequantize_aef(raw)  # band-first in, band-first out -- no transpose\nprint(\"embedded.shape:\", embedded.shape)\nprint(\"max |embedded|:\", np.nanmax(np.abs(embedded)))\n\n# By-hand walkthrough on a single pixel, so the formula above is seen\n# applied to genuine values, not just called as a black box.\nrow, col = raw.shape[1] // 2, raw.shape[2] // 2\nraw_pixel = raw[:, row, col].astype(np.float32)",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "step1_scaled",
+     "answer": "raw_pixel / 127.5"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "step2_squared",
+     "answer": "step1_scaled**2"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "step3_signed",
+     "answer": "step2_squared * np.sign(raw_pixel)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "step4_norm",
+     "answer": "np.linalg.norm(step3_signed)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "step5_unit",
+     "answer": "step3_signed / step4_norm"
+    }
+   ],
+   "after": "print(\"raw int8 (first 5 bands):\", raw_pixel[:5])\nprint(\"after /127.5 (first 5):\", step1_scaled[:5])\nprint(\"after **2 (first 5):\", step2_squared[:5])\nprint(\"after * sign (first 5):\", step3_signed[:5])\nprint(\"pre-renorm L2 norm:\", step4_norm)\nprint(\"unit-norm result (first 5 bands):\", step5_unit[:5])\nprint(\"matches dequantize_aef at this pixel:\", np.allclose(step5_unit, embedded[:, row, col], atol=1e-5))"
+  },
+  {
+   "type": "output",
+   "text": "embedded.shape: (64, 225, 157)\nmax |embedded|: 0.5565869\nraw int8 (first 5 bands): [ -6. -84. -25. -58.  38.]\nafter /127.5 (first 5): [-0.04705882 -0.65882355 -0.19607843 -0.45490196  0.29803923]\nafter **2 (first 5): [0.00221453 0.43404847 0.03844675 0.2069358  0.08882738]\nafter * sign (first 5): [-0.00221453 -0.43404847 -0.03844675 -0.2069358   0.08882738]\npre-renorm L2 norm: 0.99583495\nunit-norm result (first 5 bands): [-0.0022238  -0.43586388 -0.03860756 -0.2078013   0.08919889]\nmatches dequantize_aef at this pixel: True",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h3>Unit-norm check</h3>\n<p><strong>Takeaway:</strong> every valid pixel in this clip is a unit vector once\ndequantized, exactly like the point tables <code>02_similarity_and_classification.ipynb</code>\nuses. That is what makes dot product equal cosine similarity there.</p>\n"
+  },
+  {
+   "type": "blank",
+   "before": "",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "norms",
+     "answer": "np.linalg.norm(embedded, axis=0)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "valid",
+     "answer": "~np.isnan(norms)"
+    }
+   ],
+   "after": "print(\"valid pixels:\", valid.sum(), \"/\", norms.size)\nassert np.allclose(norms[valid], 1.0, atol=1e-3), \"dequantized pixels must be unit-norm\"\nprint(\"unit-norm check passed for all valid pixels\")"
+  },
+  {
+   "type": "output",
+   "text": "valid pixels: 35325 / 35325\nunit-norm check passed for all valid pixels",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h3>Static pseudo-RGB</h3>\n<p>Same illustrative band triple as Path A (A01, A16, A09), stretched to\n<code>[-0.3, 0.3]</code> for display only -- this range is a DISPLAY STRETCH, not\na physical reflectance range, and the three channels carry no RGB\nmeaning; they are just three of the embedding's 64 axes.</p>\n<p><strong>Why does this map look geographically structured although the three\naxes have no RGB meaning?</strong></p>\n"
+  },
+  {
+   "type": "blank",
+   "before": "import matplotlib.pyplot as plt",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "pseudo_rgb",
+     "answer": "embedded[[1, 16, 9]].transpose(1, 2, 0)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "stretched",
+     "answer": "np.clip((pseudo_rgb + 0.3) / 0.6, 0, 1)"
+    }
+   ],
+   "after": "fig, ax = plt.subplots(figsize=(6, 6))\nax.imshow(stretched)\nax.set_title(\"Pseudo-RGB (bands A01/A16/A09, display stretch [-0.3, 0.3])\")\nax.axis(\"off\")\nfig.savefig(\"figures/01_pseudo_rgb.png\")\nplt.show()"
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/01-access/fig-01.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<h3>PCA on the clip</h3>\n"
+  },
+  {
+   "type": "blank",
+   "before": "h, w = embedded.shape[1], embedded.shape[2]\nflat = embedded.reshape(64, h * w).T  # (H*W, 64), band-last for sklearn\nvalid_mask = ~np.isnan(flat).any(axis=1)\nflat_valid = flat[valid_mask]",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "pca",
+     "answer": "PCA(n_components=3, random_state=RANDOM_STATE)"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "components_valid",
+     "answer": "pca.fit_transform(flat_valid)"
+    }
+   ],
+   "after": "components_full = np.full((h * w, 3), np.nan, dtype=np.float32)\ncomponents_full[valid_mask] = components_valid\npc1_map = components_full[:, 0].reshape(h, w)\n\nfig, ax = plt.subplots(figsize=(6, 6))\nim = ax.imshow(pc1_map, cmap=\"RdBu_r\")\nax.set_title(\"First principal component of the clip's embeddings\")\nax.axis(\"off\")\nfig.colorbar(im, ax=ax, shrink=0.7)\nfig.savefig(\"figures/01_pca.png\")\nplt.show()"
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/01-access/fig-02.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Caption:</strong> this component separates built-up, denser pixels from\nopen, vegetated pixels in this sample -- never &quot;measures vegetation&quot;\nor &quot;is built-up&quot;: a component is a direction in 64-D embedding space\nfit to this one clip, not a labeled physical variable.</p>\n<p><strong>Takeaway:</strong> the pseudo-RGB map above looks geographically structured\nbecause nearby pixels tend to share similar land cover and therefore\nhave similar embeddings, not because any single axis or component has\nan assigned physical meaning. This same first principal component\nseparates those same two areas from each other in this sample as the\npseudo-RGB composite does visually -- two different views of the same\nunderlying structure, neither of which names what the axes &quot;are&quot;.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Wrap-up</h2>\n<p><strong>Takeaways:</strong></p>\n<ul>\n<li>AlphaEarth ships 64-band embeddings as quantized int8; recovering a\nreal vector requires <code>dequantize_aef</code>'s formula\n(<code>(v / 127.5) ** 2 * sign(v)</code>, then L2 renormalization) -- never\naverage raw int8 values directly.</li>\n<li>Every valid pixel in the bundled clip dequantizes to a unit-norm\nvector, exactly like the point tables <code>02_similarity_and_classification.ipynb</code>\nuses -- that unit-norm property is what makes dot product equal\ncosine similarity there.</li>\n<li>A pseudo-RGB composite is always a DISPLAY STRETCH over three\nillustrative axes, never a physical reflectance range, and the axes\nthemselves carry no RGB meaning.</li>\n<li>A PCA component separates landscape types observed <em>in this sample</em>\n-- it never &quot;measures&quot; or &quot;is&quot; a physical quantity, because it is a\ndirection fit to one clip's data, not a labeled variable.</li>\n<li>Path B reaches every one of these conclusions with zero credentials,\nusing only the checked-in <code>data/bern_aef_2024_clip.tif</code> -- proving\nthe course's central promise that no notebook hard-depends on an\nEarth Engine account.</li>\n</ul>\n<p><strong>What's next:</strong> <code>02_similarity_and_classification.ipynb</code> uses these\nsame dequantized, unit-norm AlphaEarth vectors (from frozen point\ntables rather than a raster window) for similarity search,\nclassification, and spatially honest validation.</p>\n<p><strong>Resources:</strong></p>\n<ul>\n<li>AlphaEarth GCS README: https://developers.google.com/earth-engine/guides/aef_on_gcs_readme</li>\n<li>AlphaEarth Earth Engine catalog entry: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL</li>\n<li>Dataset version: <code>1.1</code> (from <code>data/bern_aef_2024_clip.provenance.json</code>)</li>\n<li>License: CC BY 4.0</li>\n<li>Attribution: &quot;The AlphaEarth Foundations Satellite Embedding dataset is\nproduced by Google and Google DeepMind.&quot; (verbatim from\n<code>data/bern_aef_2024_clip.provenance.json</code>, reused, never retyped)</li>\n</ul>\n"
+  }
+ ],
+ "quiz": [
+  {
+   "id": "Q1",
+   "prompt_html": "<p>The notebook's &quot;PCA on the clip&quot; section captions its first-principal-component map as separating &quot;built-up, denser pixels from open, vegetated pixels.&quot; A student concludes: &quot;so PC1 is a vegetation index.&quot; Is this correct?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Yes, since the map visually correlates with vegetation, PC1 must be measuring vegetation as a physical quantity.",
+     "explanation_html": "<p>Incorrect — the &quot;Caption&quot; directly under the PCA figure forbids exactly this reading: &quot;never 'measures vegetation' or 'is built-up': a component is a direction in 64-D embedding space fit to this one clip, not a labeled physical variable.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "No — PC1 is a direction of maximum variance fit to this specific clip's 64-D embeddings; it happens to separate built-up from vegetated pixels in this sample, but it is not a labeled, physically-defined vegetation index like NDVI.",
+     "explanation_html": "<p>Correct — this is the exact wording of the Caption: the component &quot;separates built-up, denser pixels from open, vegetated pixels in this sample,&quot; phrased deliberately as a this-sample observation, not a general physical measurement, and the section explicitly warns against naming the axis &quot;vegetation.&quot;</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Yes, because AlphaEarth's band A16 (used in the pseudo-RGB) is specifically designed to encode vegetation.",
+     "explanation_html": "<p>Incorrect — the pseudo-RGB section states the three chosen bands (A01, A16, A09) are &quot;just three of the embedding's 64 axes&quot; carrying &quot;no RGB meaning,&quot; not a bespoke vegetation-sensitive band; the same &quot;no assigned physical meaning&quot; rule the PCA Caption states applies to individual bands too.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "No, because PCA cannot be run on embedding vectors at all.",
+     "explanation_html": "<p>Incorrect — the &quot;PCA on the clip&quot; section runs <code>PCA(n_components=3).fit_transform(...)</code> directly on the dequantized embedding matrix; PCA on embeddings is exactly what the section demonstrates.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q2",
+   "prompt_html": "<p>Why does the &quot;Static pseudo-RGB&quot; visualization stretch band values to <code>[-0.3, 0.3]</code> before display, and what does that stretch represent?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "It represents the true physical reflectance range of the underlying satellite bands.",
+     "explanation_html": "<p>Incorrect — the section states explicitly: &quot;this range is a DISPLAY STRETCH, not a physical reflectance range&quot; — it is a visualization convenience, not a physical unit.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "It is a display-only contrast stretch chosen to make the chosen embedding axes visible as an image; the three channels (A01, A16, A09) carry no RGB meaning regardless of the stretch applied.",
+     "explanation_html": "<p>Correct — this matches the section text directly: &quot;stretched to <code>[-0.3, 0.3]</code> for display only... the three channels carry no RGB meaning; they are just three of the embedding's 64 axes.&quot;</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "It converts the int8 AlphaEarth values into true-color RGB imagery.",
+     "explanation_html": "<p>Incorrect — the section is explicit that the three bands used &quot;carry no RGB meaning&quot;; the visualization is called &quot;pseudo-RGB&quot; precisely because it borrows the RGB display convention without the bands actually being red/green/blue reflectance.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "It is the dequantization formula applied a second time for display purposes.",
+     "explanation_html": "<p>Incorrect — dequantization (<code>(v/127.5)**2 * sign(v)</code>) is a separate, earlier step described under &quot;The int8 dequantization formula&quot;; the <code>[-0.3, 0.3]</code> stretch in &quot;Static pseudo-RGB&quot; is a distinct display-only rescaling applied after dequantization.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q3",
+   "prompt_html": "<p>The &quot;Unit-norm check&quot; section asserts <code>np.allclose(norms[valid], 1.0, atol=1e-3)</code> after dequantization. Why does this matter for anything you might do later, like averaging several nearby pixels?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "It doesn't matter; unit-norm is just a cosmetic property of AlphaEarth.",
+     "explanation_html": "<p>Incorrect — the section's Takeaway states this directly matters because it's &quot;what makes dot product equal cosine similarity&quot; in <code>02_similarity_and_classification.ipynb</code>; averaging raw int8 values instead of dequantized unit vectors &quot;silently corrupts the data&quot; per the &quot;int8 dequantization formula&quot; section's Pitfall reference.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "Because every valid dequantized pixel is confirmed to be a unit vector, dot products between dequantized pixels equal cosine similarities directly, and any subsequent averaging of raw (pre-dequantization) int8 values would silently corrupt the result since quantization is non-linear.",
+     "explanation_html": "<p>Correct — the Takeaway states pixels are &quot;unit vector[s] once dequantized, exactly like the point tables <code>02_similarity_and_classification.ipynb</code> uses. That is what makes dot product equal cosine similarity there,&quot; and the earlier &quot;int8 dequantization formula&quot; section warns that &quot;averaging raw int8 values directly... silently corrupts the data, because the quantization is non-linear.&quot;</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "It confirms that the AlphaEarth data has no missing/nodata pixels.",
+     "explanation_html": "<p>Incorrect — the same code explicitly separates <code>valid = ~np.isnan(norms)</code> before asserting unit-norm only on valid pixels, meaning nodata pixels are expected and excluded, not disproven.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "It only applies to this specific Bern clip, not to any other AlphaEarth tile.",
+     "explanation_html": "<p>Incorrect — the Takeaway generalizes this property (&quot;exactly like the point tables <code>02_similarity_and_classification.ipynb</code> uses&quot;), tying it to the dequantization formula itself, which is provider-wide, not clip-specific.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q4",
+   "prompt_html": "<p>Path A (live Earth Engine) and Path B (the bundled offline clip) both let you inspect AlphaEarth data. If a student only ever runs Path B, do they still reach the same core conclusions about the data (unit-norm, dequantization, PCA structure)?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "No — Path A and Path B use fundamentally different embedding products, so their outputs cannot be compared.",
+     "explanation_html": "<p>Incorrect — the notebook is structured so both paths inspect the same AlphaEarth Google Satellite Embedding product; Path B (&quot;offline access from the bundled clip&quot;) is explicitly the credential-free fallback for the same data, per &quot;Path B: Offline access from the bundled clip (no credentials needed).&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "Yes — Path B works from the same int8-quantized AlphaEarth clip and applies the identical `dequantize_aef` formula, unit-norm check, pseudo-RGB, and PCA steps, so the conceptual conclusions (dequantization matters, unit-norm holds, PCA components aren't labeled variables) hold regardless of which path supplied the raw bytes.",
+     "explanation_html": "<p>Correct — Path B's section header states it needs &quot;no credentials,&quot; and every subsequent subsection (&quot;The int8 dequantization formula,&quot; &quot;Unit-norm check,&quot; &quot;Static pseudo-RGB,&quot; &quot;PCA on the clip&quot;) operates on <code>raw</code>/<code>embedded</code> arrays without reference to which path produced them — the conclusions are about the data's properties, not the access method.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "No — only Path A's live Earth Engine data is dequantized; Path B's offline clip is already float and skips that step.",
+     "explanation_html": "<p>Incorrect — the &quot;int8 dequantization formula&quot; section explicitly operates on <code>raw</code> read from the bundled clip and calls <code>dequantize_aef(raw)</code>, meaning the offline clip is also delivered as int8 and requires the same dequantization step.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "This cannot be determined without running Path A, which requires a registered Earth Engine project.",
+     "explanation_html": "<p>Incorrect — Path B is designed precisely so the offline path can be run and reasoned about without ever touching Path A or needing a project; the notebook's own structure treats it as self-sufficient for these conclusions.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q5",
+   "prompt_html": "<p>A student sees the pseudo-RGB image looks &quot;geographically structured&quot; — roads, fields, and buildings are visually distinguishable — and concludes the three chosen bands (A01, A16, A09) must individually encode meaningful physical categories like &quot;roads&quot; or &quot;vegetation.&quot; What does the notebook's own explanation say instead?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "The visual structure exists because nearby pixels tend to share similar land cover and therefore similar embeddings overall — not because any single axis or component has an assigned physical meaning; the same underlying structure also shows up in the unrelated PC1 map.",
+     "explanation_html": "<p>Correct — this is the exact wording of the PCA section's Takeaway: &quot;the pseudo-RGB map above looks geographically structured because nearby pixels tend to share similar land cover and therefore have similar embeddings, not because any single axis or component has an assigned physical meaning... two different views of the same underlying structure, neither of which names what the axes 'are'.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "The bands were specifically engineered by Google to represent roads, vegetation, and buildings as separate RGB channels.",
+     "explanation_html": "<p>Incorrect — the pseudo-RGB section states the three bands &quot;carry no RGB meaning; they are just three of the embedding's 64 axes,&quot; directly contradicting any claim of engineered physical-category channels.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "This structure is a rendering artifact of the `[-0.3, 0.3]` stretch and would disappear with a different stretch range.",
+     "explanation_html": "<p>Incorrect — the stretch only affects contrast/display range, not the underlying spatial correlation of nearby pixels' embeddings; the Takeaway attributes the structure to shared land cover producing similar embeddings, a property of the data, not the display stretch.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "It confirms component 3 of the PCA specifically measures vegetation, since the pseudo-RGB uses band A16.",
+     "explanation_html": "<p>Incorrect — this conflates the pseudo-RGB band selection (A01, A16, A09, chosen for display) with the separate PCA computation (fit on all 64 bands via <code>PCA(n_components=3)</code>); neither is captioned as measuring vegetation, per the PCA Caption's explicit warning.</p>\n"
+    }
+   ]
+  }
+ ]
+}

@@ -14,7 +14,7 @@ KERNEL_NAME := geo-embeddings-course
 # Defaults to notebooks/solutions, which does not exist yet in this repo (Phase 3).
 NOTEBOOKS_DIR ?= notebooks/solutions
 
-.PHONY: env kernel test test-network execute-notebooks exercises slides slides-pdf
+.PHONY: env kernel test test-network execute-notebooks exercises slides slides-pdf web-content web-serve
 
 # Marp CLI is the slide toolchain (07-01): `brew install --cask quarto`'s
 # .pkg installer requires interactive sudo on this machine, so Quarto is
@@ -123,3 +123,12 @@ slides-pdf:
 # hand-edit this file — it is only ever produced by `uv export` with these flags.
 requirements-colab.txt: pyproject.toml uv.lock
 	uv export --format requirements-txt --no-hashes --no-dev --no-emit-project -o requirements-colab.txt
+
+# --- mobile web companion -------------------------------------------------
+# The bundle is committed so the container image needs neither the notebooks nor
+# the geo stack. Regenerate it whenever a solution notebook is re-executed.
+web-content:
+	uv run --extra web python tools/build_web_course.py
+
+web-serve: web-content
+	uv run --extra web uvicorn webapp.app:app --reload --host 0.0.0.0 --port 8000

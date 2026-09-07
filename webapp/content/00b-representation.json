@@ -1,0 +1,282 @@
+{
+ "slug": "00b-representation",
+ "stem": "00b_representation_inspection",
+ "title": "Module 1: Representations — Pixel, Patch and Location Embeddings",
+ "blocks": [
+  {
+   "type": "prose",
+   "html": "<h2>What you will learn</h2>\n<ol>\n<li>Load an AlphaEarth 64-D pixel embedding for one point</li>\n<li>Load a Clay 1024-D patch embedding for a nearby location</li>\n<li>Compare shape, spatial unit, temporal support and metadata side by side</li>\n<li>(Optional) Load a SatCLIP location embedding, if torch is installed</li>\n</ol>\n<table>\n<thead>\n<tr>\n<th>Prerequisite</th>\n<th>Needed?</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Python, NumPy/pandas basics</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td>Earth Engine account</td>\n<td><strong>No</strong></td>\n</tr>\n<tr>\n<td>torch</td>\n<td><strong>No</strong> (optional, only for the SatCLIP section)</td>\n</tr>\n</tbody>\n</table>\n<p><strong>Time to complete:</strong> ~10 minutes.</p>\n<p>Course reference environment: 2026-08 release. Provider APIs may change.\nEvery cloud notebook has a local/offline fallback.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>The AlphaEarth pixel vector</h2>\n<p>AlphaEarth (Google Satellite Embedding) produces one 64-D vector per\n10 m pixel, per calendar year. It is a <strong>pixel</strong> embedding: the smallest\nspatial unit in this notebook, and the only one with a fixed annual\ncadence.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "bern = load(\"bern\", 2024)\nrow = bern.iloc[0]\nae_vector = row[A_COLS].to_numpy(dtype=\"float32\")\nae_norm = float(np.linalg.norm(ae_vector))\n\nprint(\"AlphaEarth pixel vector shape:\", ae_vector.shape)\nprint(\"AlphaEarth pixel vector L2 norm:\", round(ae_norm, 4))\nprint(\"Spatial unit: one 10m pixel\")\nprint(\"Temporal support: one calendar-year composite (2024)\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "AlphaEarth pixel vector shape: (64,)\nAlphaEarth pixel vector L2 norm: 1.0\nSpatial unit: one 10m pixel\nTemporal support: one calendar-year composite (2024)",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> the AlphaEarth vector is a single point in a 64-D space\nwith no independently interpretable axis — see\n<code>01_alphaearth_access_visualize.ipynb</code> for what that means visually.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>The Clay patch embedding</h2>\n<p>Clay (via the LGND corpus) produces one 1024-D vector per Sentinel-2\nL2A scene, per MajorTOM patch. It is a <strong>patch</strong> embedding: a much\nlarger footprint than an AlphaEarth pixel, and tied to a single\nobservation rather than a yearly composite.</p>\n"
+  },
+  {
+   "type": "blank",
+   "before": "clay = pd.read_parquet(\"data/clay_sample_fixture.parquet\")\nclay_row = clay.iloc[0]",
+   "lines": [
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "clay_vector",
+     "answer": "np.array(clay_row[\"embedding\"], dtype=\"float32\")"
+    },
+    {
+     "kind": "blank",
+     "indent": "",
+     "lhs": "clay_norm",
+     "answer": "float(np.linalg.norm(clay_vector))"
+    }
+   ],
+   "after": "print(\"Clay patch embedding shape:\", clay_vector.shape)\nprint(\"Clay patch embedding L2 norm:\", round(clay_norm, 4))\nprint(\"Spatial unit: one Sentinel-2 patch (MajorTOM cell, 2,560 m)\")\nprint(\"Temporal support: one Sentinel-2 L2A scene at\", clay_row[\"datetime\"])\n\nwith open(\"data/clay_sample_fixture.provenance.json\") as f:\n    clay_provenance = json.load(f)\nprint(\"Clay fixture provenance:\", json.dumps(clay_provenance, indent=2))"
+  },
+  {
+   "type": "output",
+   "text": "Clay patch embedding shape: (1024,)\nClay patch embedding L2 norm: 3.1778\nSpatial unit: one Sentinel-2 patch (MajorTOM cell, 2,560 m)\nTemporal support: one Sentinel-2 L2A scene at 2025-06-17 12:38:08.887000+02:00\nClay fixture provenance: {\n  \"embedding_product\": \"lgnd_clay_v1.5_sentinel2_l2a\",\n  \"dataset_version\": \"v1.5\",\n  \"year\": 2025,\n  \"extraction_date\": \"2026-09-03T23:32:03.210016+00:00\",\n  \"source_path\": \"https://data.source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a/aggregated/geohash_l2=u0/year=2025/month=06/data_01c1fab1-0004-5b1c-0009-b72e01d3104e_222_0_0.parquet\",\n  \"sampling_method\": \"ST_Intersects Bern city center (7.4474, 46.948), first 5 rows\",\n  \"crs\": \"EPSG:4326\",\n  \"license\": \"CC BY 4.0\",\n  \"attribution\": \"LGND Clay v1.5 Sentinel-2 L2A embeddings, Source Cooperative, CC BY 4.0\",\n  \"created_by\": \"pipeline/fetch_clay_fixture.py\"\n}",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> a Clay patch embedding covers a much larger area and a\nsingle scene, not a yearly composite — &quot;the same location&quot; means\nsomething different for a pixel vector than for a patch embedding.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Side-by-side comparison</h2>\n<p>Shape and spatial unit are the first two things to check before\ncombining or comparing embeddings from different providers.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "comparison = pd.DataFrame(\n    {\n        \"dims\": [ae_vector.shape[0], clay_vector.shape[0]],\n        \"spatial_unit\": [\n            \"one 10m pixel\",\n            \"one Sentinel-2 patch (MajorTOM cell, 2,560 m)\",\n        ],\n        \"temporal_support\": [\n            \"one calendar-year composite (2024)\",\n            f\"one Sentinel-2 L2A scene ({clay_row['datetime']})\",\n        ],\n        \"source\": [\n            \"AlphaEarth (Google Satellite Embedding)\",\n            \"Clay v1.5 (LGND corpus)\",\n        ],\n    },\n    index=[\"AlphaEarth pixel\", \"Clay patch\"],\n)\nprint(comparison)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "                  dims                                   spatial_unit  \\\nAlphaEarth pixel    64                                  one 10m pixel   \nClay patch        1024  one Sentinel-2 patch (MajorTOM cell, 2,560 m)   \n\n                                                   temporal_support  \\\nAlphaEarth pixel                 one calendar-year composite (2024)   \nClay patch        one Sentinel-2 L2A scene (2025-06-17 12:38:08....   \n\n                                                   source  \nAlphaEarth pixel  AlphaEarth (Google Satellite Embedding)  \nClay patch                        Clay v1.5 (LGND corpus)",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> shape and spatial unit are the first two things to check\nbefore combining or comparing embeddings from different providers —\nModule 5 revisits this with TESSERA and OlmoEarth.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Optional: SatCLIP location embedding</h2>\n<p>SatCLIP produces a <strong>location</strong> embedding: it is derived from\ncoordinates alone (lon/lat, sometimes with metadata like a target\nresolution), with no observation date at all. It knows nothing about\nwhat happened at a place this year — that is the tradeoff for needing\nno imagery to query it. SatCLIP requires <code>torch</code>, which is\nintentionally kept out of this course's core/providers install\n(ENV-05), so this section degrades gracefully when torch is absent.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "try:\n    import torch  # noqa: F401\n\n    TORCH_AVAILABLE = True\nexcept ImportError:\n    TORCH_AVAILABLE = False\n\nif not TORCH_AVAILABLE:\n    print(\n        \"torch is not installed in this environment — skipping the SatCLIP \"\n        \"section. SatCLIP location embeddings are optional per EARLY-02; \"\n        \"see the isolated envs/clay/ environment referenced in the \"\n        \"technology-stack docs for a torch-enabled walkthrough.\"\n    )\nelse:\n    # This branch is illustrative only: no bundled SatCLIP weights ship\n    # with this course, so a real forward pass is out of scope here. It\n    # is not expected to execute in the reference environment (torch is\n    # absent by default) and does not need a real model checkpoint.\n    satclip_vector = np.zeros(256, dtype=\"float32\")  # placeholder shape only\n    print(\n        \"torch is installed — SatCLIP location embeddings are typically a \"\n        \"few hundred dimensions; placeholder shape:\",\n        satclip_vector.shape,\n    )",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "torch is not installed in this environment — skipping the SatCLIP section. SatCLIP location embeddings are optional per EARLY-02; see the isolated envs/clay/ environment referenced in the technology-stack docs for a torch-enabled walkthrough.",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Wrap-up</h2>\n<ul>\n<li>The AlphaEarth vector is a single point in a 64-D space describing\none 10 m pixel for one calendar year, with no independently\ninterpretable axis.</li>\n<li>A Clay patch embedding covers a much larger area and a single scene —\n&quot;the same location&quot; means something different for a pixel vector\nthan for a patch embedding.</li>\n<li>Shape and spatial unit are the first two things to check before\ncombining or comparing embeddings from different providers.</li>\n</ul>\n<p><strong>What's next:</strong> <code>01_alphaearth_access_visualize.ipynb</code> goes deeper on\nthe AlphaEarth pixel embedding alone.</p>\n<p><strong>Resources:</strong></p>\n<ul>\n<li>AlphaEarth catalog: https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL</li>\n<li>LGND / Clay v1.5 Sentinel-2 L2A corpus (Source Cooperative, CC BY 4.0): https://source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a</li>\n<li>SatCLIP paper and repo: https://github.com/microsoft/satclip</li>\n</ul>\n"
+  }
+ ],
+ "quiz": [
+  {
+   "id": "Q1",
+   "prompt_html": "<p>You have a 64-D AlphaEarth vector for one point and a 1024-D Clay embedding for the same coordinates. Can you concatenate them into a single 1088-D vector and run cosine similarity against another such concatenated pair, expecting a meaningful result?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Yes, since both are embeddings, concatenation is always safe.",
+     "explanation_html": "<p>Incorrect — the &quot;Side-by-side comparison&quot; section's Takeaway is explicit: &quot;shape and spatial unit are the first two things to check before combining or comparing embeddings from different providers.&quot; A 10 m pixel and a 2,560 m patch describe physically different footprints; naive concatenation mixes incompatible spatial units.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "No — not without first checking that the two embeddings describe the same spatial unit and temporal support, which for AlphaEarth (one 10 m pixel, one calendar-year composite) and Clay (one ~2,560 m MajorTOM patch, one Sentinel-2 scene) they do not.",
+     "explanation_html": "<p>Correct — this is exactly the comparison table in &quot;Side-by-side comparison&quot;: <code>dims</code>, <code>spatial_unit</code>, and <code>temporal_support</code> differ, and the Takeaway names checking shape and spatial unit as the mandatory first step before combining providers.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Yes, because concatenating any two float32 arrays of any length is always mathematically valid.",
+     "explanation_html": "<p>Incorrect — being programmatically possible (numpy will happily concatenate arrays) is not the same as being meaningful; the section's whole point is that shape compatibility does not imply semantic compatibility.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "No, because Clay embeddings cannot be represented as numpy arrays.",
+     "explanation_html": "<p>Incorrect — the notebook does exactly that: <code>clay_vector = np.array(clay_row[&quot;embedding&quot;], dtype=&quot;float32&quot;)</code> under &quot;The Clay patch embedding&quot; section, printing its shape as a normal array.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q2",
+   "prompt_html": "<p>The AlphaEarth pixel vector print output shows shape <code>(64,)</code>. What does this &quot;one 10 m pixel&quot; spatial unit mean when comparing two AlphaEarth vectors from points 5 meters apart?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "They are almost certainly the same underlying 10 m pixel or immediately adjacent pixels, so high similarity between them says little beyond spatial adjacency.",
+     "explanation_html": "<p>Correct — &quot;The AlphaEarth pixel vector&quot; section states AlphaEarth is &quot;the smallest spatial unit in this notebook&quot; at &quot;one 10 m pixel.&quot; Two points 5 m apart likely fall in the same or a neighboring pixel, so any similarity result mostly reflects that adjacency, not an independent land-cover judgment — the same adjacent-pixel leakage concern raised again in Module 3's spatial-CV section.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "They must belong to different MajorTOM cells.",
+     "explanation_html": "<p>Incorrect — MajorTOM cells are a Clay/LGND concept (2,560 m), described in &quot;The Clay patch embedding&quot; section, not an AlphaEarth pixel-level concept at all.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Their temporal support automatically differs, since AlphaEarth timestamps are pixel-specific.",
+     "explanation_html": "<p>Incorrect — &quot;The AlphaEarth pixel vector&quot; section states AlphaEarth's temporal support is &quot;one calendar-year composite (2024),&quot; identical for every pixel drawn from the same year, not pixel-specific.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "This has no bearing on interpretation; only the vector shape matters.",
+     "explanation_html": "<p>Incorrect — the section's Takeaway explicitly says the vector &quot;with no independently interpretable axis&quot; and points to spatial unit info printed alongside the shape, i.e., shape alone is insufficient.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q3",
+   "prompt_html": "<p>The Clay patch embedding print output reports shape <code>(1024,)</code> and &quot;Spatial unit: one Sentinel-2 patch (MajorTOM cell, 2,560 m)&quot;. A student claims: &quot;since Clay's vector is bigger (1024 vs 64), it must describe a smaller, more precise spatial area than AlphaEarth.&quot; Is this correct?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Yes, higher dimensionality always implies finer spatial resolution.",
+     "explanation_html": "<p>Incorrect — dimensionality and spatial footprint are unrelated axes of comparison. The &quot;Side-by-side comparison&quot; table lists them as two separate columns (<code>dims</code> and <code>spatial_unit</code>) precisely because one does not determine the other.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "No — the comparison table shows Clay's spatial unit is a 2,560 m MajorTOM cell, which is a much *larger* footprint than AlphaEarth's 10 m pixel, despite Clay's vector having many more dimensions.",
+     "explanation_html": "<p>Correct — this is stated directly in the &quot;Side-by-side comparison&quot; table and its Takeaway: Clay's <code>spatial_unit</code> is &quot;one Sentinel-2 patch (MajorTOM cell, 2,560 m)&quot; versus AlphaEarth's &quot;one 10 m pixel&quot; — the larger vector describes the larger area, the opposite of the student's claim.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Yes, because Clay is described as a \"patch\" embedding and patches are always smaller than pixels.",
+     "explanation_html": "<p>Incorrect — &quot;patch&quot; in this course's vocabulary (see &quot;The Clay patch embedding&quot; heading) refers to a fixed MajorTOM tile, 2,560 m, larger than an AlphaEarth &quot;pixel&quot; (10 m), not smaller — the terms name spatial units, not implied sizes.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "This cannot be determined from the notebook's output.",
+     "explanation_html": "<p>Incorrect — the &quot;Side-by-side comparison&quot; table prints exactly this information (<code>spatial_unit</code> column) for both providers.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q4",
+   "prompt_html": "<p>What does the &quot;Temporal support&quot; field printed for AlphaEarth (&quot;one calendar-year composite (2024)&quot;) versus Clay (&quot;one Sentinel-2 L2A scene at [datetime]&quot;) tell you about matching them to the &quot;same&quot; point in time?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Both describe an identical, single-instant satellite pass, so temporal matching is straightforward.",
+     "explanation_html": "<p>Incorrect — the AlphaEarth vector is explicitly a &quot;calendar-year composite,&quot; an aggregate over the whole year, not a single pass; the Clay vector is tied to &quot;a single scene,&quot; a specific acquisition datetime — these are structurally different temporal supports, as the &quot;The Clay patch embedding&quot; Takeaway states directly: &quot;means something different for a pixel vector than for a patch embedding.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "AlphaEarth's yearly composite smooths over intra-year variation (e.g. seasonal change), while Clay's single-scene embedding reflects one specific date's conditions — so \"the same year\" does not mean \"the same moment\" across the two providers.",
+     "explanation_html": "<p>Correct — this is the direct reading of the two printed Temporal support lines and the section's Takeaway that &quot;the same location&quot; means something different for a pixel vector versus a patch embedding once you also account for time.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Temporal support is irrelevant to embedding comparison; only spatial unit matters.",
+     "explanation_html": "<p>Incorrect — the notebook prints both spatial unit and temporal support side by side in the comparison table specifically because both matter together, not just one.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Clay embeddings have no temporal information at all.",
+     "explanation_html": "<p>Incorrect — the print output explicitly shows <code>clay_row[&quot;datetime&quot;]</code>, a specific acquisition date, directly contradicting this option.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q5",
+   "prompt_html": "<p>The &quot;Optional: SatCLIP location embedding&quot; section describes SatCLIP as a &quot;location&quot; embedding derived from coordinates alone, with no observation date. What is the key conceptual difference between a location embedding and the pixel/patch embeddings covered earlier?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": false,
+     "text": "Location embeddings require the most recent satellite pass to be computed.",
+     "explanation_html": "<p>Incorrect — the section states the opposite: SatCLIP &quot;knows nothing about what happened at a place this year — that is the tradeoff for needing no imagery to query it,&quot; meaning it needs no recent (or any) imagery at query time.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": true,
+     "text": "A location embedding is derived purely from where a place is (lon/lat), not from what was observed there at any specific time — unlike AlphaEarth (annual composite) or Clay (single scene), both of which are grounded in actual satellite imagery.",
+     "explanation_html": "<p>Correct — this matches the section text directly: SatCLIP &quot;is derived from coordinates alone... with no observation date at all,&quot; in contrast to the imagery-grounded pixel and patch embeddings covered in the earlier sections.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "SatCLIP embeddings are always exactly 64-D, matching AlphaEarth.",
+     "explanation_html": "<p>Incorrect — the section's placeholder code explicitly uses <code>np.zeros(256, dtype=&quot;float32&quot;)</code> with the comment &quot;placeholder shape only,&quot; and states real SatCLIP embeddings are &quot;typically a few hundred dimensions&quot; — not 64.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Location embeddings cannot be compared to pixel or patch embeddings under any circumstances.",
+     "explanation_html": "<p>Incorrect — the section doesn't make this absolute claim; it flags a conceptual tradeoff (no temporal grounding) rather than declaring comparison categorically impossible.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q6",
+   "prompt_html": "<p>Why does the &quot;Optional: SatCLIP location embedding&quot; section wrap its demonstration in a <code>try/except ImportError</code> check for <code>torch</code>, rather than importing it unconditionally?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "Because torch is intentionally kept out of this course's core/providers install, so the section must degrade gracefully when it is absent.",
+     "explanation_html": "<p>Correct — the section text states this directly: &quot;SatCLIP requires <code>torch</code>, which is intentionally kept out of this course's core/providers install (ENV-05), so this section degrades gracefully when torch is absent.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "Because torch is not a real Python package and the import would always fail.",
+     "explanation_html": "<p>Incorrect — torch is a real, installable package; the code path that runs when <code>TORCH_AVAILABLE</code> is true demonstrates handling the case where it <em>is</em> installed.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Because SatCLIP cannot be described without running a live model.",
+     "explanation_html": "<p>Incorrect — the section explicitly states the torch-available branch &quot;is illustrative only... not expected to execute in the reference environment... does not need a real model checkpoint,&quot; i.e., no live model run is required either way.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Because import errors in Jupyter notebooks always crash the entire kernel.",
+     "explanation_html": "<p>Incorrect — Python's <code>try/except ImportError</code> is a standard, safe pattern precisely because it prevents a crash; that is the point of using it here.</p>\n"
+    }
+   ]
+  }
+ ]
+}

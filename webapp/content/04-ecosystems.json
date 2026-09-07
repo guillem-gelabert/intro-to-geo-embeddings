@@ -1,0 +1,376 @@
+{
+ "slug": "04-ecosystems",
+ "stem": "04_embedding_ecosystems",
+ "title": "Module 5: Embedding Ecosystems",
+ "blocks": [
+  {
+   "type": "prose",
+   "html": "<h2>What you will learn</h2>\n<ol>\n<li>How to pull a TESSERA embedding (via <code>geotessera</code>, pinned\n<code>dataset_version=&quot;v1.1&quot;</code>, <code>dataset_variant=&quot;cambridge&quot;</code>) for a point</li>\n<li>How to pull a Clay/LGND embedding (via DuckDB reading GeoParquet over\nHTTPS) for the same area</li>\n<li>Why you must <em>check</em> a new provider's vector norm with\n<code>course.embeddings.norm_diagnostics</code> rather than assume it behaves like\nAlphaEarth's unit-norm vectors</li>\n<li>That the same <code>cosine_similarity_map</code> helper reuses cleanly across all\nthree providers — provider portability in practice, not just in theory</li>\n</ol>\n<table>\n<thead>\n<tr>\n<th>Prerequisite</th>\n<th>Needed?</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Python, NumPy/pandas basics</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td><code>geotessera</code> / DuckDB installed</td>\n<td><strong>No</strong> — falls back to a bundled fixture</td>\n</tr>\n<tr>\n<td>Network access</td>\n<td><strong>No</strong> — falls back to a bundled fixture</td>\n</tr>\n</tbody>\n</table>\n<p><strong>Time to complete:</strong> ~2 minutes execution.\nRuns on free Colab CPU; the live provider paths are optional extras.</p>\n<p>Course reference environment: 2026-08 release. Provider APIs may change.\nEvery cloud notebook has a local/offline fallback.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Optional providers: check, don't assume, availability</h2>\n<p><code>geotessera</code> and <code>duckdb</code> live in this project's optional <code>providers</code>\ndependency group (<code>pyproject.toml</code>), NOT the core environment — a student\nfollowing the core install path will not have them, and that is by\ndesign (mirrors <code>ENV-05</code>'s environment-isolation guarantee). Every live\ncall in this notebook is wrapped in <code>try</code>/<code>except</code> and falls back to a\nsmall bundled fixture captured ahead of time by\n<code>tools/capture_provider_fixtures.py</code>, so the section runs identically\nwhether or not the extras are installed.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "try:\n    import geotessera\n\n    HAS_GEOTESSERA = True\nexcept ImportError:\n    HAS_GEOTESSERA = False\n\ntry:\n    import duckdb\n\n    HAS_DUCKDB = True\nexcept ImportError:\n    HAS_DUCKDB = False\n\nprint(f\"geotessera available: {HAS_GEOTESSERA}\")\nprint(f\"duckdb available: {HAS_DUCKDB}\")\nif not (HAS_GEOTESSERA and HAS_DUCKDB):\n    print(\n        'Install the optional extras with `uv sync --extra providers` (or '\n        '`pip install \"geo-embeddings-course[providers]\"`) for the live '\n        \"provider paths. This notebook runs fully without them.\"\n    )",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "geotessera available: False\nduckdb available: False\nInstall the optional extras with `uv sync --extra providers` (or `pip install \"geo-embeddings-course[providers]\"`) for the live provider paths. This notebook runs fully without them.",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>TESSERA: a 128-D, 10 m embedding</h2>\n<p><a href=\"https://geotessera.readthedocs.io\">TESSERA</a> is a 128-dimensional, 10 m\nresolution embedding served over public HTTPS via <code>geotessera</code> — no\nauthentication required. Two facts matter before reusing it:</p>\n<ol>\n<li><strong>It is 128-D, not 64-D like AlphaEarth.</strong> Code that hardcodes a\n64-wide vector will break; <code>course.embeddings.cosine_similarity_map</code>\ndoes not hardcode a width, so it works unchanged.</li>\n<li><strong>Its unit-norm property is undocumented.</strong> AlphaEarth's dequantized\nvectors are unit-norm by construction (Module 3 proved this with an\nassertion). TESSERA makes no such documented guarantee. The right\nresponse is not to assume either way — it is to <em>check</em>, with\n<code>course.embeddings.norm_diagnostics</code>, every time you adopt a new\nprovider.</li>\n</ol>\n<p><code>geotessera</code>'s <strong>software</strong> is MIT-licensed. Its <strong>embedding data</strong>\nlicense is not stated in the project's docs or README as of this course's\n2026-08 reference release — an open question this course does not\nresolve for you. Treat any TESSERA sample you bundle as unresolved-license\nuntil you can confirm otherwise; do not assume CC BY just because\nAlphaEarth and Clay both are.</p>\n<p>We pin the dataset explicitly — <code>dataset_version=&quot;v1.1&quot;</code>,\n<code>dataset_variant=&quot;cambridge&quot;</code> — because an unpinned call would silently\nhand different students different data over time (<code>v1.0</code> is frozen\nlegacy, <code>v2</code> is beta).</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "TESSERA_YEAR = 2024  # EDIT ME",
+   "editable": true,
+   "executed": true
+  },
+  {
+   "type": "code",
+   "code": "import json\n\nimport course.data\nimport course.schema\nfrom course.embeddings import cosine_similarity_map, norm_diagnostics\n\nFIXTURE_PATH = Path(\"data/fixtures/tessera_bern_2024.json\")\n\n# Query points: a handful of the existing frozen Bern sample_id coordinates,\n# so this section produces a real multi-point similarity table rather than a\n# single-vector demo, even in the fixture-only fallback path.\nbern = course.data.load(\"bern\", 2021)\nquery_points = bern[[\"sample_id\", \"lon\", \"lat\", \"label\"]].head(5).reset_index(drop=True)\ncoords = list(zip(query_points[\"lon\"], query_points[\"lat\"]))\n\ntessera_vectors = None\ntessera_source = None\n\nif HAS_GEOTESSERA:\n    try:\n        gt = geotessera.GeoTessera(dataset_version=\"v1.1\", dataset_variant=\"cambridge\")\n        tessera_vectors = np.asarray(\n            gt.sample_embeddings_at_points(coords, year=TESSERA_YEAR), dtype=np.float32\n        )\n        tessera_source = \"live geotessera call\"\n    except Exception as e:\n        print(f\"live TESSERA fetch failed ({e}); using bundled fixture\")\n\nif tessera_vectors is None:\n    if not HAS_GEOTESSERA:\n        print(\"geotessera is not installed; using bundled fixture\")\n    with FIXTURE_PATH.open() as f:\n        fixture = json.load(f)\n    fixture_vec = np.asarray(fixture[\"embedding\"], dtype=np.float32)\n    # Fixture only covers one point live/synthetic-captured; repeat it across\n    # the query set so the \"repeats one operation on several points\"\n    # requirement is satisfiable without pretending the others are real\n    # fetches too.\n    tessera_vectors = np.tile(fixture_vec, (len(coords), 1))\n    tessera_source = f\"bundled fixture ({fixture['fixture_type']})\"\n\nprint(f\"TESSERA vectors: shape={tessera_vectors.shape}, source={tessera_source!r}\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "geotessera is not installed; using bundled fixture\nTESSERA vectors: shape=(5, 128), source='bundled fixture (synthetic-illustrative)'",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "diag = norm_diagnostics(tessera_vectors)\nprint(\"TESSERA norm diagnostics:\", diag)\nif not (0.9 < diag[\"mean\"] < 1.1):\n    print(\n        \"WARNING: TESSERA vectors are not close to unit norm here -- do not \"\n        \"assume cosine similarity behaves like it does for AlphaEarth. \"\n        \"This is a report, not a hard assertion: TESSERA's norm property is \"\n        \"explicitly undocumented, so a crashing assert would make this \"\n        \"notebook fragile to a legitimate provider property.\"\n    )\nelse:\n    print(\n        \"TESSERA vectors are close to unit norm in this sample -- consistent \"\n        \"with, but not proof of, a general unit-norm guarantee.\"\n    )",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "TESSERA norm diagnostics: {'mean': 0.9850000143051147, 'std': 5.960464477539063e-08, 'min': 0.9850000739097595, 'max': 0.9850000739097595, 'n': 5}\nTESSERA vectors are close to unit norm in this sample -- consistent with, but not proof of, a general unit-norm guarantee.",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> unlike Module 3's AlphaEarth checkpoint (a hard <code>assert</code>\nbecause unit-norm is a verified property of that data), this cell only\n<em>reports</em>. That asymmetry is deliberate: it is the teaching point about\nprovider portability — verify the contract every time you change\nprovider, rather than copying an assumption forward.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "query_vec = tessera_vectors[0]\nsims = cosine_similarity_map(query_vec, tessera_vectors)\n\nranked = query_points.copy()\nranked[\"similarity_to_first\"] = sims\nranked = ranked.sort_values(\"similarity_to_first\", ascending=False)\nprint(ranked)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "   sample_id       lon        lat label  similarity_to_first\n0          0  7.537958  47.049958  bare                  1.0\n1          1  7.537958  47.049542  bare                  1.0\n2          2  7.537542  47.049125  bare                  1.0\n3          3  7.537958  47.049125  bare                  1.0\n4          4  7.537542  47.048708  bare                  1.0",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> the exact same <code>cosine_similarity_map</code> helper used against\n64-D AlphaEarth vectors in Module 3 works unchanged against 128-D TESSERA\nvectors here — it never hardcodes an embedding width and never assumes\nunit norm, so provider portability comes for free from the helper's own\ndesign, not from any TESSERA-specific code in this notebook.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Clay: a 1024-D patch embedding from the open LGND corpus</h2>\n<p>The <a href=\"https://source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a\">LGND open Clay corpus</a>\n(<code>lgnd-clay-v1-5-sentinel-2-l2a</code>) publishes 1024-dimensional Clay v1.5\nSentinel-2 L2A patch embeddings as <strong>CC BY 4.0</strong> hive-partitioned\nGeoParquet, queryable directly with DuckDB's <code>spatial</code> and <code>httpfs</code>\nextensions over plain <strong>HTTPS</strong> — never <code>s3://</code>: the bucket's dotted\nname breaks TLS with virtual-hosted-style S3 URLs. Bern's partition is\n<code>geohash_l2=u0</code>.</p>\n<p>This is a <em>different</em> product from TESSERA above (1024-D vs 128-D) and\nfrom AlphaEarth (64-D) — none of these vector spaces are directly\ncomparable to one another without a shared projection. What transfers\nacross all three is the <em>operation</em> (<code>cosine_similarity_map</code>,\n<code>norm_diagnostics</code>), not the numbers.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "CLAY_FIXTURE_PATH = Path(\"data/fixtures/clay_bern_sample.json\")\nCLAY_PARQUET_URL = (\n    \"https://data.source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a/aggregated/\"\n    \"geohash_l2=u0/year=2025/month=06/*.parquet\"\n)\n\nclay_vectors = None\nclay_source = None\n\nif HAS_DUCKDB:\n    try:\n        duckdb.sql(\"INSTALL httpfs; LOAD httpfs; INSTALL spatial; LOAD spatial;\")\n        clay_df = duckdb.sql(\n            f\"SELECT * FROM read_parquet('{CLAY_PARQUET_URL}') LIMIT 5\"\n        ).df()\n        clay_vectors = np.asarray(clay_df[\"embedding\"].tolist(), dtype=np.float32)\n        clay_source = \"live DuckDB HTTPS read\"\n    except Exception as e:\n        print(f\"live Clay corpus fetch failed ({e}); using bundled fixture\")\nelse:\n    print(\"duckdb is not installed; using bundled fixture\")\n\nif clay_vectors is None:\n    with CLAY_FIXTURE_PATH.open() as f:\n        clay_fixture = json.load(f)\n    clay_fixture_vec = np.asarray(clay_fixture[\"embedding\"], dtype=np.float32)\n    # This fixture is a single recorded row (see fixture_type/source below,\n    # both printed so nobody mistakes this for five independent live\n    # points); repeat it to satisfy \"an operation across the corpus's own\n    # rows\" without pretending the repeats are distinct observations.\n    clay_vectors = np.tile(clay_fixture_vec, (5, 1))\n    clay_source = f\"bundled fixture ({clay_fixture['fixture_type']}, {clay_fixture['source']})\"\n\nprint(f\"Clay vectors: shape={clay_vectors.shape}, source={clay_source!r}\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "duckdb is not installed; using bundled fixture\nClay vectors: shape=(5, 1024), source=\"bundled fixture (live-captured, data/clay_sample_fixture.parquet row 0 (captured by Plan 05-01's fetch script from the live LGND Clay corpus over HTTPS))\"",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "clay_diag = norm_diagnostics(clay_vectors)\nprint(\"Clay norm diagnostics:\", clay_diag)\nif not (0.9 < clay_diag[\"mean\"] < 1.1):\n    print(\n        \"WARNING: Clay vectors are not close to unit norm here -- as with \"\n        \"TESSERA, this is a report, not a hard assertion. Clay's norm \"\n        \"property is a separate fact from AlphaEarth's and TESSERA's; check \"\n        \"it, don't assume it, every time you adopt a new provider.\"\n    )\nelse:\n    print(\n        \"Clay vectors are close to unit norm in this sample -- consistent \"\n        \"with, but not proof of, a general unit-norm guarantee.\"\n    )",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "Clay norm diagnostics: {'mean': 3.1777896881103516, 'std': 0.0, 'min': 3.1777896881103516, 'max': 3.1777896881103516, 'n': 5}\nWARNING: Clay vectors are not close to unit norm here -- as with TESSERA, this is a report, not a hard assertion. Clay's norm property is a separate fact from AlphaEarth's and TESSERA's; check it, don't assume it, every time you adopt a new provider.",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "clay_query = clay_vectors[0]\nclay_sims = cosine_similarity_map(clay_query, clay_vectors)\nclay_top_sim = float(np.sort(clay_sims)[-2])\nprint(\n    f\"Clay section observed: n={clay_diag['n']} rows, \"\n    f\"norm mean={clay_diag['mean']:.3f}, \"\n    f\"top similarity (excl. self)={clay_top_sim:.3f}\"\n)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "Clay section observed: n=5 rows, norm mean=3.178, top similarity (excl. self)=1.000",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> the numbers printed above (n rows, norm mean, top\nsimilarity) are this run's actual output, not a hardcoded guess.</p>\n<p>Clay's 1024-D vectors and TESSERA's 128-D vectors are NOT directly\ncomparable to AlphaEarth's 64-D vectors, nor to each other, without a\nshared projection trained for that purpose. &quot;Provider portability&quot; in\nthis course means the same <code>cosine_similarity_map</code>/<code>norm_diagnostics</code>\n<em>operations</em> run unchanged across all three — it does NOT mean the\nnumbers produced are interchangeable or that a similarity score from one\nprovider translates to another.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>LGND: a managed similarity-search service</h2>\n<p>So far every provider in this course hands you the raw vectors and you\nimplement the operation (cosine similarity, norm checks) yourself.\n<strong>LGND is a different shape of product</strong>: a REST API where you express\nthe operation (&quot;find similar patches near this point&quot;) and the service\nholds the vector index and does the search — you never see the raw\n1024-D vectors it works with. There is no first-party LGND SDK (per\nSTACK.md); this section uses plain <code>requests</code> against LGND's published\nOpenAPI reference, the same way any REST API would be called from\nPython.</p>\n<p>LGND requires a bearer token (<code>LGND_TOKEN</code> in the environment; a trial\ntier exists). This notebook never hard-depends on it: no token means no\nlive call, and the section still completes using a small, clearly\nlabeled recorded fixture. The exact endpoint path below reflects LGND's\ndocumented base pattern as of this course's 2026-08 reference release —\nconfirm against the live OpenAPI spec before depending on it in your own\ncode, since third-party API shapes can change between course releases.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import requests\n\nLGND_TOKEN = os.environ.get(\"LGND_TOKEN\")\nLGND_FIXTURE_PATH = Path(\"data/fixtures/lgnd_response.json\")\nLGND_API_URL = \"https://api.lgnd.ai/v1/search\"  # confirm against the live OpenAPI spec\n\n\ndef _load_lgnd_fixture() -> dict:\n    with LGND_FIXTURE_PATH.open() as f:\n        return json.load(f)\n\n\nlgnd_result = None\nif LGND_TOKEN:\n    try:\n        resp = requests.get(\n            LGND_API_URL,\n            headers={\"Authorization\": f\"Bearer {LGND_TOKEN}\"},\n            params={\"lon\": 7.4474, \"lat\": 46.9480, \"k\": 3},\n            timeout=15,\n        )\n        resp.raise_for_status()\n        lgnd_result = resp.json()\n        lgnd_source = \"live LGND API call\"\n    except Exception as e:\n        print(f\"LGND live call failed ({e}); using recorded fixture\")\nelse:\n    print(\"LGND_TOKEN not set; skipping live call, using recorded fixture\")\n\nif lgnd_result is None:\n    lgnd_result = _load_lgnd_fixture()\n    lgnd_source = f\"recorded fixture ({lgnd_result['fixture_type']})\"\n\nprint(f\"LGND result source: {lgnd_source!r}\")\nprint(f\"LGND results (top {len(lgnd_result['results'])}):\")\nfor r in lgnd_result[\"results\"]:\n    print(f\"  {r['stac_item_id']}: score={r['score']:.3f}\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "LGND_TOKEN not set; skipping live call, using recorded fixture\nLGND result source: 'recorded fixture (recorded-illustrative)'\nLGND results (top 3):\n  S2C_32TLT_20250617_0_L2A: score=1.000\n  S2C_32TLT_20250522_0_L2A: score=0.912\n  S2C_32TLT_20250428_0_L2A: score=0.887",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> notice the API shape difference from every other provider\nin this notebook — LGND returns ranked <code>stac_item_id</code>/<code>score</code> pairs, not\na matrix you feed into <code>cosine_similarity_map</code> yourself. That trade —\nless code, but no access to the underlying vectors or control over the\nsimilarity metric — is the practical meaning of &quot;managed service&quot; versus\n&quot;you hold the vectors.&quot;</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Optional: the Local Clay Encoder</h2>\n<p>Everything above reads <em>pre-computed</em> Clay embeddings. If you want to\nencode a Sentinel-2 scene into a Clay embedding yourself, that requires\nrunning the Clay v1.5 model checkpoint locally with <code>torch</code> — a GPU-\nfriendly, dependency-heavy workload deliberately kept OUT of this\nnotebook's environment. STACK.md documents an isolated <code>envs/clay/</code> uv\nproject for this: a separate <code>pyproject.toml</code> with <code>claymodel</code> (the\n<code>Clay-foundation/model</code> git dependency), <code>torch&gt;=2.4</code>, and the pinned\n<code>clay-v1.5.ckpt</code> checkpoint URL. Run it there, or on a Colab GPU runtime\n— never in this notebook's own environment, which never imports <code>torch</code>.\nThis keeps the core course environment installable on any machine,\nregardless of GPU availability, and avoids torch's large dependency\nfootprint for students who only ever consume pre-computed embeddings.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>OlmoEarth: custom temporal windows vs annual fields</h2>\n<p>AlphaEarth publishes one embedding per year — a fixed annual composite.\nOlmoEarth's differentiator is <strong>configurable temporal windows and\nresolutions</strong>: instead of a single annual field, you request an\nembedding for the date range and resolution your task actually needs\n(a month, a season, a custom window), rather than being locked into\nwhatever composite period the provider chose. That flexibility is a real\ntrade-off, not a strict improvement — a custom-window query is a request\nyou must construct and validate yourself, versus AlphaEarth's single,\nalready-validated annual product.</p>\n<p>OlmoEarth has no public API exercised elsewhere in this course, so this\ncomparison is markdown only — no live call, no fixture, no code cell.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Provenance</h2>\n<p>TESSERA, Clay, and LGND lack a frozen-table <code>course_provenance</code> attrs\ndict the way the AlphaEarth tables from <code>course.data.load</code> do, so this\nnotebook hand-builds its provenance dict rather than forcing these three\nproviders through <code>build_provenance</code> (which requires that attrs key and\nwould raise <code>KeyError</code> here). <code>write_provenance</code> only needs any\nJSON-serializable dict, so this hand-built structure is still written\nthrough it.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "from datetime import UTC, datetime\n\nfrom course.provenance import write_provenance\n\nprovider_provenance = {\n    \"tessera\": {\n        \"dataset_version\": \"v1.1\",\n        \"dataset_variant\": \"cambridge\",\n        \"source\": tessera_source,\n        \"license\": (\n            \"MIT (software); embedding-data license unstated in docs/README \"\n            \"as of this course's 2026-08 reference release (STACK.md gap)\"\n        ),\n        \"attribution\": \"TESSERA, served via geotessera / Source Cooperative\",\n    },\n    \"clay\": {\n        \"embedding_product\": \"lgnd-clay-v1-5-sentinel-2-l2a\",\n        \"partition\": \"geohash_l2=u0/year=2025/month=06\",\n        \"source\": clay_source,\n        \"license\": \"CC BY 4.0\",\n        \"attribution\": (\n            \"LGND Clay v1.5 Sentinel-2 L2A embeddings, Source Cooperative, CC BY 4.0\"\n        ),\n    },\n    \"lgnd\": {\n        \"api\": \"LGND REST similarity search (no first-party SDK)\",\n        \"source\": lgnd_source,\n        \"license\": (\n            \"LGND open Clay corpus is CC BY 4.0; the commercial LGND API \"\n            \"carries separate terms -- confirm the license that applies to \"\n            \"your specific use before redistributing API results\"\n        ),\n    },\n}\n\nnotebook_provenance = {\n    \"created_by\": \"04_embedding_ecosystems.ipynb\",\n    \"generated_at\": datetime.now(UTC).isoformat(),\n    \"providers\": provider_provenance,\n}\nwrite_provenance(notebook_provenance, Path(\"outputs/provenance_04.json\"))\nprint(\"wrote outputs/provenance_04.json\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "wrote outputs/provenance_04.json",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Wrap-up</h2>\n<p><strong>Takeaways:</strong></p>\n<ul>\n<li>The same <code>cosine_similarity_map</code>/<code>norm_diagnostics</code> operations from\n<code>course.embeddings</code> ran unchanged against AlphaEarth (64-D), TESSERA\n(128-D), and Clay (1024-D) vectors — provider portability is about the\noperation, not the numbers, which are NOT comparable across providers.</li>\n<li>A managed service like LGND trades vector access for a simpler,\nalready-implemented similarity operation — a different point on the\nsame spectrum, not a strictly better or worse one.</li>\n<li>Every provider's license differs and must be checked per artifact:\nAlphaEarth CC BY 4.0, TESSERA software MIT / data license unstated,\nClay corpus CC BY 4.0, LGND API terms separate from the open corpus.</li>\n</ul>\n<p><strong>What's next:</strong> the capstone notebook reuses these same\n<code>course.embeddings</code> helpers — <code>cosine_similarity_map</code>, <code>norm_diagnostics</code>,\n<code>change_score</code> — end to end on a full artificialization workflow.</p>\n<p><strong>Resources:</strong></p>\n<ul>\n<li>TESSERA docs: https://geotessera.readthedocs.io</li>\n<li>LGND Clay corpus: https://source.coop/clay/lgnd-clay-v1-5-sentinel-2-l2a</li>\n<li>Clay model: https://clay-foundation.github.io/model/</li>\n<li>OlmoEarth: consult its own documentation for current API/access status\n(no public API exercised in this course as of the 2026-08 release)</li>\n</ul>\n"
+  }
+ ],
+ "quiz": [
+  {
+   "id": "Q1",
+   "prompt_html": "<p>The notebook computes <code>norm_diagnostics</code> on TESSERA vectors and only prints a warning if the mean is far from 1.0, rather than a hard <code>assert</code> like Module 3 used for AlphaEarth. Why the different treatment?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "TESSERA's unit-norm property is undocumented, so a crashing assert\nwould make the notebook fragile to a legitimate provider property; a\nreport is the honest response to an unverified contract.",
+     "explanation_html": "<p>Correct.** Quoted verbatim: &quot;unlike Module 3's AlphaEarth checkpoint\n(a hard <code>assert</code> because unit-norm is a verified property of that\ndata), this cell only <em>reports</em>. That asymmetry is deliberate: it is\nthe teaching point about provider portability — verify the contract\nevery time you change provider, rather than copying an assumption\nforward.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "TESSERA vectors are always unit-norm, so the check is redundant and\nonly kept for symmetry with AlphaEarth's code.",
+     "explanation_html": "<p>Incorrect.** The section states directly: &quot;Its unit-norm property is\nundocumented ... The right response is not to assume either way — it\nis to <em>check</em>.&quot;</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Hard asserts are computationally too expensive for 128-D vectors.",
+     "explanation_html": "<p>Incorrect.** Cost is never given as the reason; the reason stated is\nepistemic (undocumented property), not performance.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "TESSERA and AlphaEarth use identical normalization, so no check is\nactually needed.",
+     "explanation_html": "<p>Incorrect.** This is the opposite of the stated reasoning — the\nsection exists specifically because AlphaEarth's unit-norm is a\n<em>verified</em> property and TESSERA's is not, so they cannot be assumed\nidentical.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q2",
+   "prompt_html": "<p>What must you check before reusing <code>cosine_similarity_map</code> on a new embedding provider you have not used before?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "The provider's vector norm, using `norm_diagnostics` — never assume\nit behaves like AlphaEarth's unit-norm vectors.",
+     "explanation_html": "<p>Correct.** Header &quot;What you will learn,&quot; item 3: &quot;Why you must\n<em>check</em> a new provider's vector norm with\n<code>course.embeddings.norm_diagnostics</code> rather than assume it behaves\nlike AlphaEarth's unit-norm vectors.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "The provider's embedding dimensionality must be padded or truncated\nto exactly 64-D to match AlphaEarth.",
+     "explanation_html": "<p>Incorrect.** The notebook states the opposite: &quot;<code>course.embeddings. cosine_similarity_map</code> does not hardcode a width, so it works\nunchanged&quot; against 128-D TESSERA and 1024-D Clay vectors directly.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "Whether the provider's API requires an Earth Engine account.",
+     "explanation_html": "<p>Incorrect.** None of TESSERA, Clay, or LGND require an Earth Engine\naccount in this notebook; the &quot;Prerequisite&quot; table marks Earth Engine\nas not needed throughout this module.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "The provider's exact release date.",
+     "explanation_html": "<p>Incorrect.** Release date is never checked in the norm-diagnostics\nsection or elsewhere as a precondition for reusing the similarity\nhelper.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q3",
+   "prompt_html": "<p><code>LGND_TOKEN</code> is not set in the environment. What does the notebook do?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "It prints that `LGND_TOKEN` is not set, skips the live call, and\nfalls back to a recorded fixture — the section still completes.",
+     "explanation_html": "<p>Correct.** Quoted verbatim: &quot;LGND_TOKEN not set; skipping live call,\nusing recorded fixture&quot; is printed, and the section's own framing\nstates &quot;This notebook never hard-depends on it: no token means no live\ncall, and the section still completes using a small, clearly labeled\nrecorded fixture.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "It raises an exception and halts the entire notebook.",
+     "explanation_html": "<p>Incorrect.** The code wraps the live call in <code>if LGND_TOKEN:</code> /\n<code>else:</code> with a fixture fallback specifically to avoid this outcome —\nsee the &quot;check, don't assume, availability&quot; design repeated for every\nprovider in this module.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "It silently substitutes a different provider's data without telling\nthe reader.",
+     "explanation_html": "<p>Incorrect.** The fixture path is explicitly printed\n(<code>f&quot;recorded fixture ({lgnd_result['fixture_type']})&quot;</code>) so the source\nis always visible, never silent.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "It prompts the student interactively to enter a token before\ncontinuing.",
+     "explanation_html": "<p>Incorrect.** No interactive prompt exists in the notebook; the\nfallback is fully automatic.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q4",
+   "prompt_html": "<p>How do TESSERA and Clay differ in how you access their embeddings?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "TESSERA is 128-D and sampled directly at points/rasters via\n`geotessera` (`sample_embeddings_at_points`, `fetch_embedding`), while\nClay is a 1024-D patch embedding queried from a hive-partitioned\nGeoParquet corpus via DuckDB over HTTPS.",
+     "explanation_html": "<p>Correct.** Quoted from the respective section headers: &quot;TESSERA: a\n128-D, 10 m embedding&quot; describes direct point/raster sampling via\n<code>geotessera</code>; &quot;Clay: a 1024-D patch embedding from the open LGND\ncorpus&quot; describes DuckDB <code>read_parquet</code> over the hive-partitioned\nGeoParquet corpus at <code>geohash_l2=u0</code>.</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "Both TESSERA and Clay are accessed the exact same way, through\n`geotessera`.",
+     "explanation_html": "<p>Incorrect.** Clay is accessed via DuckDB reading GeoParquet\n(<code>duckdb.sql(&quot;... read_parquet(...)&quot;)</code>), not via <code>geotessera</code>, which\nis TESSERA-specific.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "TESSERA requires a bearer token; Clay does not.",
+     "explanation_html": "<p>Incorrect.** Bearer-token auth belongs to the LGND REST API section,\nnot TESSERA (served &quot;over public HTTPS via <code>geotessera</code> — no\nauthentication required&quot;) or the open Clay corpus (public GeoParquet,\nno token).</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "TESSERA and Clay produce vectors of the same dimensionality, so\nthey can be directly compared without transformation.",
+     "explanation_html": "<p>Incorrect.** The notebook states plainly: &quot;Clay's 1024-D vectors and\nTESSERA's 128-D vectors are NOT directly comparable to AlphaEarth's\n64-D vectors, nor to each other, without a shared projection trained\nfor that purpose.&quot;</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q5",
+   "prompt_html": "<p>&quot;Provider portability&quot; as demonstrated across AlphaEarth, TESSERA, and Clay in this notebook means:</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "The same operations (`cosine_similarity_map`, `norm_diagnostics`)\nrun unchanged across providers — it does NOT mean the similarity\nnumbers themselves are comparable across providers.",
+     "explanation_html": "<p>Correct.** Wrap-up Takeaway, quoted verbatim: &quot;The same\n<code>cosine_similarity_map</code>/<code>norm_diagnostics</code> operations from\n<code>course.embeddings</code> ran unchanged against AlphaEarth (64-D), TESSERA\n(128-D), and Clay (1024-D) vectors — provider portability is about the\noperation, not the numbers, which are NOT comparable across\nproviders.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "A similarity score of 0.9 from Clay means the same thing as a 0.9\nscore from AlphaEarth.",
+     "explanation_html": "<p>Incorrect.** This is precisely the confusion the same Takeaway warns\nagainst: numbers &quot;are NOT comparable across providers&quot; without a\nshared projection.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "All three providers must be converted to the same dimensionality\nbefore any operation can be reused.",
+     "explanation_html": "<p>Incorrect.** The notebook reuses the operations unchanged at their\nnative dimensionalities (64-D, 128-D, 1024-D) — no dimensionality\nconversion step exists in this notebook.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "Portability means only that the notebook's code is short.",
+     "explanation_html": "<p>Incorrect.** The Takeaway's point is about operation reuse across\ngenuinely different vector spaces, not code brevity.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q6",
+   "prompt_html": "<p>How does querying LGND differ in kind from querying TESSERA or Clay in this notebook?</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "LGND is a managed service: you express the operation via a REST API\ncall and the service returns ranked results (`stac_item_id`/`score`\npairs) — you never see the raw vectors it works with, unlike TESSERA\nand Clay where you hold the vectors and compute similarity yourself.",
+     "explanation_html": "<p>Correct.** Quoted verbatim: &quot;LGND is a different shape of product: a\nREST API where you express the operation ... and the service holds the\nvector index and does the search — you never see the raw 1024-D\nvectors it works with,&quot; and the Takeaway: &quot;LGND returns ranked\n<code>stac_item_id</code>/<code>score</code> pairs, not a matrix you feed into\n<code>cosine_similarity_map</code> yourself.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "LGND is strictly better than TESSERA and Clay because it requires\nless code.",
+     "explanation_html": "<p>Incorrect.** The Takeaway frames this as &quot;a trade&quot; (less code, but no\nvector access or metric control), explicitly not a strict\nimprovement.</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "LGND, TESSERA, and Clay all return the identical response shape.",
+     "explanation_html": "<p>Incorrect.** The Takeaway explicitly calls out &quot;the API shape\ndifference from every other provider in this notebook.&quot;</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "LGND requires no authentication at all, unlike TESSERA and Clay.",
+     "explanation_html": "<p>Incorrect.** LGND &quot;requires a bearer token (<code>LGND_TOKEN</code> in the\nenvironment; a trial tier exists)&quot; — the reverse of TESSERA/Clay, both\nof which are public/no-auth in this notebook.</p>\n"
+    }
+   ]
+  },
+  {
+   "id": "Q7",
+   "prompt_html": "<p>Regarding TESSERA's embedding-data license, the notebook says:</p>\n",
+   "options": [
+    {
+     "label": "A",
+     "correct": true,
+     "text": "Treat any TESSERA sample you bundle as unresolved-license until\nconfirmed otherwise — the software is MIT, but the embedding data's\nlicense is not stated in the docs or README.",
+     "explanation_html": "<p>Correct.** Quoted verbatim: &quot;<code>geotessera</code>'s <strong>software</strong> is\nMIT-licensed. Its <strong>embedding data</strong> license is not stated in the\nproject's docs or README ... Treat any TESSERA sample you bundle as\nunresolved-license until you can confirm otherwise; do not assume CC\nBY just because AlphaEarth and Clay both are.&quot;</p>\n"
+    },
+    {
+     "label": "B",
+     "correct": false,
+     "text": "TESSERA embedding data is CC BY 4.0, same as AlphaEarth and Clay.",
+     "explanation_html": "<p>Incorrect.** This is the exact assumption the notebook warns\nagainst: &quot;do not assume CC BY just because AlphaEarth and Clay both\nare.&quot;</p>\n"
+    },
+    {
+     "label": "C",
+     "correct": false,
+     "text": "TESSERA embedding data is public domain since the software is MIT.",
+     "explanation_html": "<p>Incorrect.** A software license (MIT) and a data license are\nexplicitly treated as two separate facts in this notebook; MIT\nsoftware licensing says nothing about the data license, which remains\nunstated.</p>\n"
+    },
+    {
+     "label": "D",
+     "correct": false,
+     "text": "TESSERA's license question was resolved by this course's research\nand is documented in `data/DATA_CARD.md`.",
+     "explanation_html": "<p>Incorrect.** The notebook calls this &quot;an open question this course\ndoes not resolve for you,&quot; not a resolved one.</p>\n"
+    }
+   ]
+  }
+ ]
+}

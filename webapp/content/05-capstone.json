@@ -1,0 +1,180 @@
+{
+ "slug": "05-capstone",
+ "stem": "05_capstone_artificialization",
+ "title": "Module 6: Capstone — Artificialization Pipeline Template",
+ "blocks": [
+  {
+   "type": "prose",
+   "html": "<h2>What you will learn</h2>\n<ol>\n<li>How to assemble a full AOI-to-provenance pipeline from reusable course\nhelpers, without reimplementing any of them</li>\n<li>The capstone rubric you are graded against, and what satisfies each row</li>\n<li>Why the rubric weights validation design above every other criterion</li>\n</ol>\n<table>\n<thead>\n<tr>\n<th>Prerequisite</th>\n<th>Needed?</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Module 3 (similarity + classification)</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td>Module 4 (change + validation)</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td>Module 5 (ecosystems: TESSERA/Clay/LGND)</td>\n<td>Recommended</td>\n</tr>\n<tr>\n<td>Earth Engine account</td>\n<td><strong>No</strong></td>\n</tr>\n</tbody>\n</table>\n<p><strong>Time to complete:</strong> ~2 minutes execution.\nRuns on free Colab CPU, no Earth Engine account.</p>\n<p>Course reference environment: 2026-08 release. Provider APIs may change.\nEvery cloud notebook has a local/offline fallback.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Capstone rubric</h2>\n<p>Your own capstone submission (a new AOI, your own labels, your own\nquestion) is graded against these six weighted criteria. Validation\ndesign is worth more than any other single row — a convincing classifier\nwith a dishonest validation still fails this rubric.</p>\n<table>\n<thead>\n<tr>\n<th>Criterion</th>\n<th>Weight</th>\n<th>What satisfies this row</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Validation design</td>\n<td>30%</td>\n<td>Spatial-block CV <strong>and</strong> leave-region-out (or leave-one-AOI-out), not a random split; both reported, not either/or</td>\n</tr>\n<tr>\n<td>Reproducibility and provenance</td>\n<td>15%</td>\n<td><code>course.provenance.build_provenance</code>/<code>write_provenance</code> output committed alongside the notebook; pinned dataset versions</td>\n</tr>\n<tr>\n<td>CRS and alignment correctness</td>\n<td>15%</td>\n<td>Reprojection to a projected CRS before any metre-based operation (<code>make_blocks</code>, buffers); no geographic-CRS distances</td>\n</tr>\n<tr>\n<td>Interpretation and uncertainty</td>\n<td>15%</td>\n<td>Reported metrics carry the CV fold spread (mean ± std), not a single point estimate; claims are scoped to what was measured</td>\n</tr>\n<tr>\n<td>Representation choice</td>\n<td>15%</td>\n<td>The embedding product used is stated explicitly, with a one-sentence trade-off against at least one alternative</td>\n</tr>\n<tr>\n<td>Licensing and ethics</td>\n<td>10%</td>\n<td>Attribution and license of every input recorded; who bears the cost of a false positive is named</td>\n</tr>\n</tbody>\n</table>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>AOI</h2>\n<p><strong>This is the cell a student replaces for their own capstone.</strong> The AOI\nknob below picks which of the course's two frozen regions this worked\nexample runs on; a real capstone submission would point <code>course.data.load</code>\nat a newly-prepared region instead (same loader, same schema, same\nvalidation calls) — nothing downstream needs to change.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "AOI = \"bern\"  # EDIT ME -- try \"seville\", or point course.data.load at your own AOI",
+   "editable": true,
+   "executed": true
+  },
+  {
+   "type": "code",
+   "code": "import course.data\nimport course.schema\nfrom course.config import ANCHOR_YEARS, AREAS\n\nHELD_OUT_REGION = \"seville\" if AOI == \"bern\" else \"bern\"\nassert AOI in AREAS, f\"AOI={AOI!r} not in course.config.AREAS: {sorted(AREAS)}\"\n\nyears = {year: course.data.load(AOI, year) for year in ANCHOR_YEARS}\nheld_out = course.data.load(HELD_OUT_REGION, ANCHOR_YEARS[-1])\n\nfor year, gdf in years.items():\n    course.schema.validate_frozen(gdf)\ncourse.schema.validate_frozen(held_out)\nprint(\n    f\"AOI={AOI!r}: loaded {sorted(years)} ({len(years[ANCHOR_YEARS[0]])} rows each); \"\n    f\"held-out region {HELD_OUT_REGION!r}: {len(held_out)} rows\"\n)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "AOI='bern': loaded [2018, 2021, 2024] (2050 rows each); held-out region 'seville': 2050 rows",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Features</h2>\n<p><strong>Representation choice</strong> (rubric row, stated explicitly): this capstone\nuses AlphaEarth directly, at its native 64 dimensions. A stronger\nsubmission might compare against TESSERA or Clay per Module 5, trading\noff AlphaEarth's global 10 m/annual coverage against TESSERA's finer\nspatial resolution or Clay's Sentinel-2-derived embedding and different\nlicense terms.</p>\n<p>The feature matrix stacks the most recent anchor year's embedding (the\n&quot;current state&quot; signal) with <code>change_score</code> computed between the two\nearlier anchor years (a &quot;recent trend&quot; signal) — the <strong>baseline-aware</strong>\nconfiguration PITFALLS.md's Pitfall 5 recommends: base-year embedding\nstacked with the delta feature, never the delta alone. A delta-only\nfeature cannot distinguish &quot;moved a lot from a stable state&quot; from &quot;moved\na lot and is still moving,&quot; which is exactly the ambiguity a raw\n<code>1 - cosine</code> threshold falls into.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "from course.embeddings import change_score\n\nX_base = course.schema.to_matrix(years[ANCHOR_YEARS[-1]])\nX_trend = change_score(\n    course.schema.to_matrix(years[ANCHOR_YEARS[0]]),\n    course.schema.to_matrix(years[ANCHOR_YEARS[1]]),\n).reshape(-1, 1)\nX_aoi = np.hstack([X_base, X_trend])\nprint(\n    f\"feature matrix: {X_aoi.shape} \"\n    f\"({X_base.shape[1]} embedding dims from {ANCHOR_YEARS[-1]} + 1 change-score dim \"\n    f\"from {ANCHOR_YEARS[0]}->{ANCHOR_YEARS[1]})\"\n)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "feature matrix: (2050, 65) (64 embedding dims from 2024 + 1 change-score dim from 2018->2021)",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Predictions</h2>\n<p><strong>Representation/target choice</strong> (stated explicitly, as the rubric\nrequires): this worked example classifies the same four adequately-\nrepresented classes Module 3 used — <strong>built, crop, vegetation, water</strong>\n(<code>bare</code> dropped as a sparse residual category, per Module 3) — rather than\ncollapsing to a binary artificialized/not-artificialized target. A\ncapstone submission is free to pick either target; whichever is chosen,\nstate it here and justify it, exactly as this cell does.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "CLASSES = [\"built\", \"crop\", \"vegetation\", \"water\"]\n\nlabel_aoi = years[ANCHOR_YEARS[-1]][\"label\"].to_numpy()\nclass_mask = np.isin(label_aoi, CLASSES)\nX_aoi_clf = X_aoi[class_mask]\ny_aoi_clf = label_aoi[class_mask]\nprint(f\"{AOI}: {len(y_aoi_clf)}/{len(label_aoi)} rows kept after dropping 'bare'\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "bern: 1900/2050 rows kept after dropping 'bare'",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "from sklearn.linear_model import LogisticRegression\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\n\nmodel = Pipeline(\n    [\n        (\"scaler\", StandardScaler()),\n        (\"clf\", LogisticRegression(random_state=RANDOM_STATE, max_iter=1000)),\n    ]\n)\nmodel.fit(X_aoi_clf, y_aoi_clf)\nprint(f\"fitted logreg on {AOI}: train accuracy={model.score(X_aoi_clf, y_aoi_clf):.3f}\")",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "fitted logreg on bern: train accuracy=0.916",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Validation: spatial-block CV and leave-region-out</h2>\n<p><strong>Validation design is the single largest rubric weight (30%)</strong> — larger\nthan every other criterion combined would need to be small for that not\nto matter. Both validations below reuse the <em>exact same</em>\n<code>course.validation.spatial_cv_report</code> call shape Module 3 used, changing\nonly <code>groups</code> and <code>cv</code> — never a hand-rolled CV loop.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "from sklearn.model_selection import GroupKFold, LeaveOneGroupOut\n\nfrom course.config import BLOCK_SIZE_M\nfrom course.validation import make_blocks, spatial_cv_report\n\nyears_gdf = years[ANCHOR_YEARS[-1]].loc[class_mask].reset_index(drop=True)\nepsg = AREAS[AOI][\"epsg\"]\ngdf_projected = years_gdf.to_crs(epsg)\ngroups_block = make_blocks(gdf_projected, block_size_m=BLOCK_SIZE_M)\nn_blocks = len(np.unique(groups_block))\nassert n_blocks >= 5, (\n    f\"only {n_blocks} spatial blocks at block_size_m={BLOCK_SIZE_M} -- need at \"\n    \"least 5 for GroupKFold(n_splits=5)\"\n)\n\nblock_report = spatial_cv_report(\n    model,\n    X_aoi_clf,\n    y_aoi_clf,\n    groups=groups_block,\n    cv=GroupKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE),\n)\nprint(\n    f\"SPATIAL-BLOCK CV ({AOI}, {n_blocks} blocks): balanced_accuracy=\"\n    f\"{block_report['mean_balanced_accuracy']:.3f} ± \"\n    f\"{block_report['std_balanced_accuracy']:.3f}\"\n)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "SPATIAL-BLOCK CV (bern, 243 blocks): balanced_accuracy=0.887 ± 0.010",
+   "images": []
+  },
+  {
+   "type": "code",
+   "code": "held_out_label = held_out[\"label\"].to_numpy()\nheld_out_class_mask = np.isin(held_out_label, CLASSES)\nheld_out_clf = held_out.loc[held_out_class_mask].reset_index(drop=True)\nX_held_out_clf = course.schema.to_matrix(held_out_clf)\n# The held-out region only carries the single most-recent anchor year loaded\n# above, so its feature matrix is embedding-only; pad a zero change-score\n# column to match X_aoi_clf's width -- an explicit, visible substitution\n# because the trend feature is undefined without a second timestamp for\n# this region, not a silent shape mismatch.\nX_held_out_clf = np.hstack(\n    [X_held_out_clf, np.zeros((len(X_held_out_clf), 1), dtype=np.float32)]\n)\n\nX_region = np.vstack([X_aoi_clf, X_held_out_clf])\ny_region = np.concatenate([y_aoi_clf, held_out_label[held_out_class_mask]])\nregion_groups = np.concatenate(\n    [np.full(len(y_aoi_clf), AOI), np.full(len(X_held_out_clf), HELD_OUT_REGION)]\n)\n\nlro_report = spatial_cv_report(\n    model, X_region, y_region, groups=region_groups, cv=LeaveOneGroupOut()\n)\nprint(\n    f\"LEAVE-REGION-OUT (train {AOI}, predict {HELD_OUT_REGION}): balanced_accuracy=\"\n    f\"{lro_report['mean_balanced_accuracy']:.3f} ± \"\n    f\"{lro_report['std_balanced_accuracy']:.3f}\"\n)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "LEAVE-REGION-OUT (train bern, predict seville): balanced_accuracy=0.656 ± 0.122",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> on this course's measured data (Module 3), leave-region-out\ncosts roughly 17-19 balanced-accuracy points relative to in-region\nspatial-block CV, while spatial-block CV costs almost nothing relative to\na random split. The gap printed above should show the same pattern: the\nhonest cross-region number, not the in-region one, is where this\npipeline's real generalization test lives. A capstone submission that\nreports only a random split, or only one of these two validations, does\nnot satisfy the validation-design rubric row — <strong>both are required.</strong></p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import pandas as pd\n\ncomparison = pd.DataFrame(\n    {\n        \"scenario\": [\"spatial-block CV (in-region)\", \"leave-region-out\"],\n        \"mean_balanced_accuracy\": [\n            block_report[\"mean_balanced_accuracy\"],\n            lro_report[\"mean_balanced_accuracy\"],\n        ],\n        \"std_balanced_accuracy\": [\n            block_report[\"std_balanced_accuracy\"],\n            lro_report[\"std_balanced_accuracy\"],\n        ],\n    }\n)\nprint(comparison)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "                       scenario  mean_balanced_accuracy  std_balanced_accuracy\n0  spatial-block CV (in-region)                0.887435               0.009544\n1              leave-region-out                0.656125               0.121750",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Map: predictions over the AOI</h2>\n<p>A prediction map on its own invites a reader to treat it as settled fact.\n<strong>This map is deliberately paired with the uncertainty section right\nbelow it, not left as a standalone figure</strong> -- per this notebook's own\nrubric row on interpretation/uncertainty, and because the leave-region-out\nresult above just showed this exact model loses a large share of its\naccuracy outside its training region. A ranked, human-verified candidate\nlayer is the honest framing; an unqualified &quot;artificialized/not&quot; map is\nnot.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import matplotlib.pyplot as plt\n\npred_aoi = model.predict(X_aoi_clf)\nmap_gdf = years_gdf.assign(pred=pred_aoi)\n\nfig, ax = plt.subplots(figsize=(6, 6))\nfor cls, group in map_gdf.groupby(\"pred\"):\n    ax.scatter(group[\"lon\"], group[\"lat\"], s=8, label=cls, alpha=0.7)\nax.set_title(f\"{AOI}: predicted class per point (in-region fit)\")\nax.set_xlabel(\"lon\")\nax.set_ylabel(\"lat\")\nax.legend(loc=\"upper right\", fontsize=\"small\")\nfig.tight_layout()\nfig.savefig(\"figures/05_prediction_map.png\")\nplt.show()",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "",
+   "images": [
+    "/static/figures/05-capstone/fig-01.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Uncertainty: model-level and validation-level</h2>\n<p>These are two genuinely different kinds of uncertainty, and conflating\nthem is exactly the overconfidence trap this section exists to avoid:</p>\n<ul>\n<li><strong>Model uncertainty</strong> -- how close a single prediction was to a\ndifferent class, for THIS fitted model on THIS data. Computed below as\nthe margin between the top two predicted-class probabilities: a small\nmargin means the model itself is unsure, even before asking whether the\nmodel generalizes at all.</li>\n<li><strong>Validation uncertainty</strong> -- how much the reported accuracy itself\nwould swing under a different sample of the same evaluation, i.e. the\nfold-to-fold spread (<code>std_balanced_accuracy</code>) already computed by\n<code>spatial_cv_report</code> above. A model can show a confident (small) margin\non every point and still have a large validation std -- these are not\nthe same signal, and reporting only one is a form of the confident-\nmap-hiding-real-uncertainty problem this phase's threat model calls\nout (T-05-14).</li>\n</ul>\n<p>A single accuracy number, with neither of these alongside it, is an\noverconfident presentation of a change/classification map.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "proba = model.predict_proba(X_aoi_clf)\nsorted_proba = np.sort(proba, axis=1)\nmargin = sorted_proba[:, -1] - sorted_proba[:, -2]\n\nfig, ax = plt.subplots(figsize=(6, 4))\nax.hist(margin, bins=30, color=\"tab:blue\", alpha=0.8)\nax.set_title(f\"{AOI}: model-level uncertainty (top-1 minus top-2 probability margin)\")\nax.set_xlabel(\"margin (0 = maximally uncertain, 1 = maximally confident)\")\nax.set_ylabel(\"count\")\nfig.tight_layout()\nfig.savefig(\"figures/05_uncertainty_margin_hist.png\")\nplt.show()\n\nprint(\n    f\"MODEL-LEVEL uncertainty ({AOI}): mean margin={margin.mean():.3f}, \"\n    f\"{(margin < 0.2).sum()}/{len(margin)} points with margin < 0.2 (low confidence)\"\n)\nprint(\n    f\"VALIDATION-LEVEL uncertainty: spatial-block CV std_balanced_accuracy=\"\n    f\"{block_report['std_balanced_accuracy']:.3f}; leave-region-out \"\n    f\"std_balanced_accuracy={lro_report['std_balanced_accuracy']:.3f} \"\n    \"(fold-to-fold spread, not a per-point number)\"\n)",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "MODEL-LEVEL uncertainty (bern): mean margin=0.810, 99/1900 points with margin < 0.2 (low confidence)\nVALIDATION-LEVEL uncertainty: spatial-block CV std_balanced_accuracy=0.010; leave-region-out std_balanced_accuracy=0.122 (fold-to-fold spread, not a per-point number)",
+   "images": [
+    "/static/figures/05-capstone/fig-02.png"
+   ]
+  },
+  {
+   "type": "prose",
+   "html": "<p><strong>Takeaway:</strong> the map above should be read as a ranked candidate layer a\nhuman verifies -- ordered by the margin computed here, low-margin points\nreviewed first -- never as a finished classification. Both uncertainty\nnumbers printed above matter: a tight model-level margin does not rescue\na wide validation-level spread, and vice versa.</p>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Provenance</h2>\n<p>Every number and figure above traces back to a specific dataset version,\nCRS, label source and license -- recorded once per table when it was\nloaded (<code>course.data.load</code>) and summarized here with <code>build_provenance</code>\n/ <code>write_provenance</code> (<code>course/provenance.py</code>), never hand-typed. This\nnotebook's own output is held to the same <code>templates/PROVENANCE_CHECKLIST.md</code>\nstandard demonstrated throughout the course, rather than only described.</p>\n"
+  },
+  {
+   "type": "code",
+   "code": "import json\n\nfrom course.provenance import build_provenance, write_provenance\n\nprovenance = build_provenance(\n    {f\"{AOI}_{year}\": gdf for year, gdf in years.items()},\n    created_by=\"05_capstone_artificialization.ipynb\",\n)\nwrite_provenance(provenance, Path(\"outputs/provenance_05.json\"))\nprint(json.dumps(provenance, indent=2))",
+   "editable": false,
+   "executed": true
+  },
+  {
+   "type": "output",
+   "text": "{\n  \"created_by\": \"05_capstone_artificialization.ipynb\",\n  \"generated_at\": \"2026-09-04T01:17:33.947682+00:00\",\n  \"tables\": [\n    {\n      \"region\": \"bern\",\n      \"year\": 2018,\n      \"embedding_product\": \"AlphaEarth Foundations Satellite Embedding v1 (annual)\",\n      \"dataset_version\": \"1.1\",\n      \"crs\": \"EPSG:4326\",\n      \"label_source\": \"esa_worldcover_2021\",\n      \"validation_source\": \"eea_hrl_imperviousness_2018\",\n      \"license\": \"CC BY 4.0\",\n      \"attribution\": \"The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.\"\n    },\n    {\n      \"region\": \"bern\",\n      \"year\": 2021,\n      \"embedding_product\": \"AlphaEarth Foundations Satellite Embedding v1 (annual)\",\n      \"dataset_version\": \"1.1\",\n      \"crs\": \"EPSG:4326\",\n      \"label_source\": \"esa_worldcover_2021\",\n      \"validation_source\": \"eea_hrl_imperviousness_2018\",\n      \"license\": \"CC BY 4.0\",\n      \"attribution\": \"The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.\"\n    },\n    {\n      \"region\": \"bern\",\n      \"year\": 2024,\n      \"embedding_product\": \"AlphaEarth Foundations Satellite Embedding v1 (annual)\",\n      \"dataset_version\": \"1.1\",\n      \"crs\": \"EPSG:4326\",\n      \"label_source\": \"esa_worldcover_2021\",\n      \"validation_source\": \"eea_hrl_imperviousness_2018\",\n      \"license\": \"CC BY 4.0\",\n      \"attribution\": \"The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.\"\n    }\n  ]\n}",
+   "images": []
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Rubric self-check</h2>\n<p>The Header's rubric table, revisited here with THIS run's own evidence\nnamed for each row -- the worked example a capstone submission's own\nself-check should imitate:</p>\n<table>\n<thead>\n<tr>\n<th>Criterion</th>\n<th>Weight</th>\n<th>This notebook's evidence</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Validation design</td>\n<td>30%</td>\n<td>The spatial-block CV cell and the leave-region-out cell above, both required and both reported side by side in the <code>comparison</code> table -- not either/or</td>\n</tr>\n<tr>\n<td>Reproducibility and provenance</td>\n<td>15%</td>\n<td>The Provenance cell's <code>outputs/provenance_05.json</code>, built entirely from <code>course.data.load</code>'s carried metadata, never hand-typed</td>\n</tr>\n<tr>\n<td>CRS and alignment correctness</td>\n<td>15%</td>\n<td>The <code>gdf_projected = years_gdf.to_crs(epsg)</code> reprojection cell before <code>make_blocks</code>, guarded by <code>make_blocks</code>' own distance-sanity assertion</td>\n</tr>\n<tr>\n<td>Interpretation and uncertainty</td>\n<td>15%</td>\n<td>The model-level margin histogram and the validation-level <code>std_balanced_accuracy</code> cells above, kept explicitly distinct</td>\n</tr>\n<tr>\n<td>Representation choice</td>\n<td>15%</td>\n<td>The Features section's explicit AlphaEarth-at-64-D choice, stated with its trade-off against TESSERA/Clay</td>\n</tr>\n<tr>\n<td>Licensing and ethics</td>\n<td>10%</td>\n<td>The Wrap-up's verbatim attribution/license strings below, plus the false-positive-cost statement: a false &quot;artificialized&quot; flag on someone's land can trigger real regulatory or compliance consequences, so a low-confidence flag (per the margin histogram above) must never be presented as certain. Inferred labels like &quot;artificialized&quot; can also be more sensitive than the underlying imagery itself -- they imply a judgment about the land's status that the raw pixels alone do not.</td>\n</tr>\n</tbody>\n</table>\n"
+  },
+  {
+   "type": "prose",
+   "html": "<h2>Wrap-up</h2>\n<p><strong>Takeaways:</strong></p>\n<ul>\n<li>This capstone template assembles an AOI-to-provenance pipeline\nentirely from <code>course</code> helpers reused, unmodified, from Modules 3-5.</li>\n<li>Validation design carries the largest rubric weight for a reason: the\nleave-region-out gap measured earlier is the single largest source of\noverconfidence this pipeline could produce if only in-region numbers\nwere reported.</li>\n<li>A prediction map is only honest alongside both a model-level and a\nvalidation-level uncertainty measure -- neither substitutes for the\nother.</li>\n<li>The provenance file and the rubric self-check above are not optional\nextras; they are graded rubric rows, produced automatically from\nmetadata already carried by <code>course.data.load</code>.</li>\n</ul>\n<p><strong>What's next:</strong> the blank templates in <code>templates/PROVENANCE_CHECKLIST.md</code>\nand <code>templates/MODEL_DATA_CARD_TEMPLATE.md</code> are what you fill in for your\nown capstone AOI -- this notebook is the worked example of applying them\nto a finished run, not a substitute for filling them in yourself.</p>\n<p><strong>Resources (verbatim attribution/license strings for every source used\nin this notebook):</strong></p>\n<ul>\n<li>AlphaEarth / Satellite Embedding -- CC BY 4.0 -- &quot;The AlphaEarth\nFoundations Satellite Embedding dataset is produced by Google and\nGoogle DeepMind.&quot;</li>\n<li>ESA WorldCover 2021 v200 (label source) -- CC BY 4.0 -- &quot;© ESA\nWorldCover project 2021 / Contains modified Copernicus Sentinel data\n(2021) processed by ESA WorldCover consortium (citation: Zanaga et al.\n2022, https://doi.org/10.5281/zenodo.7254221)&quot;</li>\n</ul>\n"
+  }
+ ],
+ "quiz": []
+}

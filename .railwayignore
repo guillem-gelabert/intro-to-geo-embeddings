@@ -1,0 +1,6 @@
+# `railway up` tars the working directory; data/raw alone is 1.7 GB and the image
+# needs none of it. Keep the upload to what the Dockerfile actually copies.
+*
+!webapp/**
+!Dockerfile
+!railway.json
