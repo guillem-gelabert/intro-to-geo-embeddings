@@ -128,3 +128,38 @@ def test_app_serves_health_and_modules():
         # direct nor an encoded traversal may reach anything the index omits.
         assert client.get("/api/module/index").status_code == 404
         assert client.get("/api/module/..%2findex").status_code == 404
+
+
+def _client(monkeypatch, user=None, password=None):
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from webapp.app import app
+
+    for name, value in (("WEB_BASIC_AUTH_USER", user), ("WEB_BASIC_AUTH_PASSWORD", password)):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+    return fastapi_testclient.TestClient(app)
+
+
+def test_basic_auth_is_off_when_unconfigured(monkeypatch):
+    with _client(monkeypatch) as client:
+        assert client.get("/").status_code == 200
+
+
+def test_basic_auth_gates_the_course_when_configured(monkeypatch):
+    with _client(monkeypatch, "reader", "s3cret") as client:
+        anonymous = client.get("/")
+        assert anonymous.status_code == 401
+        assert anonymous.headers["WWW-Authenticate"].startswith("Basic realm=")
+
+        assert client.get("/", auth=("reader", "wrong")).status_code == 401
+        assert client.get("/", auth=("wrong", "s3cret")).status_code == 401
+        assert client.get("/", auth=("reader", "s3cret")).status_code == 200
+        assert client.get("/api/index", auth=("reader", "s3cret")).status_code == 200
+
+
+def test_health_stays_open_so_railway_can_probe_it(monkeypatch):
+    # A gated /health 401s the platform healthcheck and fails every deploy.
+    with _client(monkeypatch, "reader", "s3cret") as client:
+        assert client.get("/health").status_code == 200

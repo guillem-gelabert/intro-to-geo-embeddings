@@ -45,3 +45,4 @@ notebooks/**/executed_*.ipynb
 slides/*.html
 slides/*.pdf
 slides/pdf/
+!.planning/quick/**/PLAN.md
