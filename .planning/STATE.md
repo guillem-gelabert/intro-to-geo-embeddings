@@ -78,6 +78,12 @@ Open decisions surfaced by research, needed at the phase indicated:
 - Phase 4: whether to register an Earth Engine noncommercial project for the Path A live cells.
 - Phase 5: verify TESSERA v1.1 coverage over the study areas and the actual Clay/LGND corpus partitions before committing the ecosystems module.
 
+## Quick Tasks Completed
+
+| ID | Date | Task | Status |
+|----|------|------|--------|
+| 260909-f5j | 2026-09-09 | Basic auth on the web companion; repo pushed to GitHub; Railway `web` deploys from `main` | complete |
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
