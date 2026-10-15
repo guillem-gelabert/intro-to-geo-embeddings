@@ -98,7 +98,9 @@ python-dateutil==2.9.0.post0
 rasterio==1.5.1
     # via geo-embeddings-course
 requests==2.34.2
-    # via folium
+    # via
+    #   folium
+    #   geo-embeddings-course
 scikit-learn==1.9.0
     # via
     #   geo-embeddings-course
@@ -117,7 +119,7 @@ threadpoolctl==3.6.0
     # via scikit-learn
 tzdata==2026.3 ; sys_platform == 'emscripten' or sys_platform == 'win32'
     # via pandas
-urllib3==2.7.0
+urllib3==2.8.0
     # via requests
 xarray==2026.7.0
     # via geo-embeddings-course
